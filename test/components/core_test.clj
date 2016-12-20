@@ -44,6 +44,13 @@
       (provided
         (components/generate-cid nil) => "FOOBAR"))
 
+    (fact "logs when processing a message"
+      (subscribe component (fn [a _] a))
+      (components/send! component "some-msg")
+      @log-output => (contains {:msg "Processing message",
+                                :type :info,
+                                :data (contains {:message "some-msg"})}))
+
     (fact "logs an error using logger and CID to correlate things"
       (subscribe component (fn [f _] (future/map #(Integer/parseInt %) f)))
       (components/send! component "ten")

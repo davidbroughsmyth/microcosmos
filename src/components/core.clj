@@ -43,6 +43,9 @@ this"))
       (listen component (fn [data]
                           (let [cid (get-in data [:meta :cid])
                                 components (update components :logger decorate-logger cid)]
+                            (log/info (:logger components)
+                                      "Processing message"
+                                      :message data)
                             (->> (callback (future/just data) components)
                                  (future/on-success (fn [_] (ack! component data)))
                                  (future/on-failure (fn [ex]
