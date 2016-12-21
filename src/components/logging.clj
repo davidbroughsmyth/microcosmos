@@ -1,6 +1,7 @@
 (ns components.logging
   (:require [cheshire.core :as cheshire]
-            [cheshire.generate :as generators]))
+            [cheshire.generate :as generators]
+            [components.cid :as cid]))
 
 (defprotocol Log
   (log [_ message type data]
@@ -10,6 +11,11 @@ Type can be :info, :warning, :error or :fatal"))
 
 (defn- log-to-stdout [msg data type])
 
+(defn decorate-logger [logger cid]
+  (reify Log
+    (log [_ message type data]
+         (log logger message type (assoc data :cid cid)))))
+
 (defrecord StdoutLogger []
   Log
   (log [_ message type data]
@@ -17,7 +23,19 @@ Type can be :info, :warning, :error or :fatal"))
         (assoc :message message)
         (assoc :type (name type))
         cheshire/encode
-        println)))
+        println))
+  cid/CID
+  (append-cid [logger cid] (decorate-logger logger cid)))
+
+(defrecord DebugLogger []
+  Log
+  (log [_ message type data]
+    (when-not (= type :info)
+      (println (-> type name .toUpperCase) ":\n"
+               message "\n\n"
+               data)))
+  cid/CID
+  (append-cid [logger cid] (decorate-logger logger cid)))
 
 (generators/add-encoder java.lang.Class generators/encode-str)
 (generators/add-encoder java.lang.StackTraceElement
