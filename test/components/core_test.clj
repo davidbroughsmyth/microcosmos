@@ -2,7 +2,8 @@
   (:require [midje.sweet :refer :all]
             [components.core :as components]
             [components.future :as future]
-            [components.logging :as log]))
+            [components.logging :as log]
+            [components.cid :as cid]))
 
 (defn fake-component [other]
   (let [fn (atom nil)]
@@ -13,10 +14,16 @@
       (reject! [_ msg ex] (components/send! other {:reject msg})))))
 
 (def log-output (atom nil))
+(def logger
+  (reify
+    log/Log
+    (log [_ msg type data]
+         (reset! log-output {:msg msg :type type :data data}))
+    cid/CID
+    (append-cid [l cid] (log/decorate-logger l cid))))
+
 (def subscribe (components/subscribe-with
-                 :logger (reify log/Log
-                           (log [_ msg type data]
-                                (reset! log-output {:msg msg :type type :data data})))))
+                 :logger logger))
 
 (facts "when subscribing for new messages"
   (let [last-msg (atom nil)
@@ -49,7 +56,7 @@
       (components/send! component "some-msg")
       @log-output => (contains {:msg "Processing message",
                                 :type :info,
-                                :data (contains {:message "some-msg"})}))
+                                :data (contains {:msg "some-msg"})}))
 
     (fact "logs an error using logger and CID to correlate things"
       (subscribe component (fn [f _] (future/map #(Integer/parseInt %) f)))
