@@ -38,7 +38,7 @@
                      (into {}))]
     (apply dissoc headers rabbit-default-meta)))
 
-(defrecord Queue [channel name max-tries cid]
+(defrecord Queue [channel name max-retries cid]
   components/IO
   (listen [_ function]
     (let [callback (fn [_ meta payload]
@@ -59,12 +59,21 @@
   (ack! [_ {:keys [meta]}]
         (basic/ack channel (:delivery-tag meta)))
 
-  (reject! [_ {:keys [meta]} ex]
-    (basic/reject channel (:delivery-tag meta)))
+  (reject! [self msg ex]
+    (let [meta (:meta msg)
+          tries (-> meta :retries (or 0))
+          tag (:delivery-tag meta)
+          cid (:cid meta)]
+      (if (>= tries max-retries)
+        (basic/reject channel tag false)
+        (do
+          (basic/ack channel tag)
+          (components/send! (cid/append-cid self cid)
+                            (assoc-in msg [:meta :retries] (inc tries)))))))
 
   cid/CID
     (append-cid [rabbit cid]
-      (->Queue channel name max-tries cid)))
+      (->Queue channel name max-retries cid)))
 
 
 (def connection (atom nil))
@@ -83,7 +92,7 @@
 
 (def default-queue-params {:exclusive false
                            :auto-delete false
-                           :max-tries 5
+                           :max-retries 5
                            :durable true
                            :ttl (* 24 60 60 1000)})
 
@@ -94,7 +103,7 @@
         dead-letter-q-name (str name "-deadletter")]
 
     (queue/declare @channel name (-> opts
-                                     (dissoc :max-tries :ttl)
+                                     (dissoc :max-retries :ttl)
                                      (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
                                                         "x-message-ttl" (:ttl opts)})))
     (queue/declare @channel dead-letter-q-name
@@ -102,4 +111,4 @@
 
     (exchange/fanout @channel dead-letter-name {:durable true})
     (queue/bind @channel dead-letter-q-name dead-letter-name)
-    (->Queue @channel name (:max-tries opts) nil)))
+    (->Queue @channel name (:max-retries opts) nil)))
