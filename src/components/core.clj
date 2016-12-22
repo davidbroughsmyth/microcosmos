@@ -37,10 +37,10 @@ this"))
   (let [components (update components :logger #(or % log/default-logger))]
     (fn [component callback]
       (listen component (fn [data]
-                          (let [cid (get-in data [:meta :cid])
+                          (let [cid (str (get-in data [:meta :cid]))
                                 new-cid (generate-cid cid)
                                 components (->> components
-                                                (map (fn [[k v]] [k (cid/append-cid v cid)]))
+                                                (map (fn [[k v]] [k (cid/append-cid v new-cid)]))
                                                 (into {}))]
                             (log/info (:logger components)
                                       "Processing message"
