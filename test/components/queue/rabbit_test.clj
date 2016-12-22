@@ -62,8 +62,7 @@
     => (contains {:a 10, :cid "FOO.BAR"}))
 
   (fact "attaches CID between services"
-    (get-in (send-and-wait {:payload "msg"}) [:meta :cid]) => "FOO.BAR"
-    (provided))
+    (get-in (send-and-wait {:payload "msg"}) [:meta :cid]) => "FOO.BAR")
 
   (against-background
     (components/generate-cid "FOO") => "FOO.BAR"
@@ -72,13 +71,15 @@
     (after :facts (rabbit/disconnect!))))
 
 ; OH MY GOSH, how difficult is to test asynchronous code!
-(fact "when message results in a failure"
-  (fact "process message two times before generating a deadletter"
+(fact "when message results in a failure process multiple times (till max-retries)"
+  (fact "acks the original msg, and generates other to retry things"
     (:payload (send-and-wait {:payload "error"} {:payload "msg"})) => "msg"
     (reset! last-promise (promise))
     (:payload (send-and-wait {:payload "other-msg"})) => "other-msg"
     (map :payload @all-deadletters) => ["error"]
     (map :payload @all-msgs) => ["error" "msg" "error" "other-msg"])
+
+  (future-fact "don't process anything if old server died (but mark to retry later)")
 
   (against-background
    (before :facts (prepare-tests))

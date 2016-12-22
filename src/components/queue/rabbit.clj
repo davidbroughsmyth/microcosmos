@@ -38,12 +38,18 @@
                      (into {}))]
     (apply dissoc headers rabbit-default-meta)))
 
+(defn- callback-payload [function self meta payload]
+  (if (:redelivery? meta)
+    (basic/publish (:channel self) "" (:name self)
+                   payload
+                   (update-in meta [:headers "retries"] #(inc (or % 0))))
+    (function {:payload (parse-payload payload)
+               :meta (parse-meta meta)})))
+
 (defrecord Queue [channel name max-retries cid]
   components/IO
   (listen [_ function]
-    (let [callback (fn [_ meta payload]
-                     (function {:payload (parse-payload payload)
-                                :meta (parse-meta meta)}))]
+    (let [callback (partial callback-payload function)]
       (consumers/subscribe channel name callback)))
 
   (send! [_ {:keys [payload meta] :or {meta {}}}]
@@ -91,6 +97,7 @@
   (reset! connection nil))
 
 (def default-queue-params {:exclusive false
+                           :auto-ack false
                            :auto-delete false
                            :max-retries 5
                            :durable true
