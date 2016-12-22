@@ -91,7 +91,7 @@
   (when-not @connection (connect!))
   (let [opts (merge default-queue-params opts)
         dead-letter-name (str name "-dlx")
-        dead-letter-q-name (str name "-deadleter")]
+        dead-letter-q-name (str name "-deadletter")]
 
     (queue/declare @channel name (-> opts
                                      (dissoc :max-tries :ttl)
