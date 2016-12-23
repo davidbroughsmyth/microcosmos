@@ -78,8 +78,7 @@
                             (assoc-in msg [:meta :retries] (inc tries)))))))
 
   cid/CID
-    (append-cid [rabbit cid]
-      (->Queue channel name max-retries cid)))
+    (append-cid [rabbit cid] (->Queue channel name max-retries cid)))
 
 
 (def connection (atom nil))
