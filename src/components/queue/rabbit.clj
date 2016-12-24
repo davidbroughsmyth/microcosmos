@@ -38,22 +38,25 @@
 (defn- parse-payload [payload]
   (-> payload (String. "UTF-8") (json/decode true)))
 
-(defn- callback-payload [callback max-retries channel self meta payload]
+(defn- callback-payload [callback max-retries self _ meta payload]
   (let [retries (or (get-in meta [:headers "retries"]) 0)
-        reject-msg #(basic/reject channel (:delivery-tag meta) false)
+        ack-msg #(basic/ack (:channel self) (:delivery-tag meta))
+        reject-msg #(basic/reject (:channel self) (:delivery-tag meta) false)
         requeue-msg #(basic/publish (:channel self) "" (:name self)
                                     payload
-                                    (update-in meta [:headers "retries"] inc retries))]
+                                    (update meta :headers (fn [hash-map]
+                                                            (doto hash-map
+                                                              (.put "retries" (inc retries))))))]
     (cond
       (not (:redelivery? meta)) (callback {:payload (parse-payload payload)
                                            :meta (parse-meta meta)})
       (>= retries max-retries) (reject-msg)
-      :requeue-message (requeue-msg))))
+      :requeue-message (do (ack-msg) (requeue-msg)))))
 
 (defrecord Queue [channel name max-retries cid]
   components/IO
-  (listen [_ function]
-    (let [callback (partial callback-payload function max-retries channel)]
+  (listen [self function]
+    (let [callback (partial callback-payload function max-retries self)]
       (consumers/subscribe channel name callback)))
 
   (send! [_ {:keys [payload meta] :or {meta {}}}]
