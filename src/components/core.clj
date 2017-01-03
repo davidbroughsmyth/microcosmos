@@ -24,14 +24,27 @@ Some services can choose to ignore this.")
 occurred, and some action should be done. Some services can choose to ignore
 this"))
 
-(defn subscribe-with [ & {:as components}]
-  (let [components (update components :logger #(or % log/default-logger))]
+(defn generate-cid [old-cid]
+  (let [upcase-chars (map char (range (int \A) (inc (int \Z))))
+        digits (range 10)
+        alfa-digits (cycle (map str (concat upcase-chars digits)))
+        cid-gen #(apply str (take % (random-sample 0.02 alfa-digits)))]
+    (if old-cid
+      (str old-cid "." (cid-gen 5))
+      (cid-gen 8))))
+
+(defn params-for-generators [msg-data]
+  (let [cid (get-in msg-data [:meta :cid])
+        new-cid (generate-cid cid)]
+    {:cid new-cid}))
+
+(defn subscribe-with [ & {:as components-generators}]
+  (let [components-generators (update components-generators :logger #(or % log/default-logger-gen))]
     (fn [component callback]
       (listen component (fn [data]
-                          (let [cid (get-in data [:meta :cid])
-                                new-cid (cid/generate-cid cid)
-                                components (->> components
-                                                (map (fn [[k v]] [k (cid/append-cid v new-cid)]))
+                          (let [params (params-for-generators data)
+                                components (->> components-generators
+                                                (map (fn [[k generator]] [k (generator params)]))
                                                 (into {}))]
                             (log/info (:logger components)
                                       "Processing message"
@@ -43,3 +56,8 @@ this"))
                                                                  "Uncaught Exception"
                                                                  :ex ex)
                                                       (reject! component data ex))))))))))
+
+(defmacro mocked [ & args]
+  `(let [function# ~params-for-generators]
+     (with-redefs [params-for-generators #(assoc (function# %) :mocked true)]
+       ~(cons `do args))))

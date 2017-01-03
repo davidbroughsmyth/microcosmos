@@ -14,13 +14,11 @@
       (reject! [_ msg ex] (components/send! other {:reject msg})))))
 
 (def log-output (atom nil))
-(def logger
+(defn logger [{:keys [cid]}]
   (reify
     log/Log
     (log [_ msg type data]
-         (reset! log-output {:msg msg :type type :data data}))
-    cid/CID
-    (append-cid [l cid] (log/decorate-logger l cid))))
+         (reset! log-output {:msg msg :type type :data (assoc data :cid cid)}))))
 
 (def subscribe (components/subscribe-with
                  :logger logger))
@@ -49,7 +47,7 @@
         (components/send! component "some-msg")
         @log-output) => {:msg "Foo", :type :info, :data {:cid "FOOBAR"}}
       (provided
-        (cid/generate-cid nil) => "FOOBAR"))
+        (components/generate-cid nil) => "FOOBAR"))
 
     (fact "logs when processing a message"
       (subscribe component (fn [a _] a))
@@ -63,3 +61,16 @@
       (components/send! component "ten")
       @log-output => (contains {:type :fatal, :data (contains {:cid string?
                                                                :ex anything})}))))
+
+(facts "When testing code"
+  (let [global-state (atom nil)
+        something (fn [params] (reset! global-state params)) ; constructor
+        sub (components/subscribe-with :component something)
+        empty-fn (fn [f _] f)
+        component (fake-component empty-fn)]
+    (sub component empty-fn)
+
+    (fact "mocks components"
+      (components/mocked
+        (components/send! component {:payload "param"}))
+      @global-state => (just {:cid string? :mocked true}))))
