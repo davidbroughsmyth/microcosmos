@@ -85,3 +85,23 @@
   (against-background
     (before :facts (prepare-tests))
     (after :facts (rabbit/disconnect!))))
+
+; Mocks
+(defn a-function []
+  (let [extract-payload :payload
+        upcases #(clojure.string/upper-case %)
+        publish #(components/send! %2 {:payload %1})]
+    (sub (rabbit/queue "test") (fn [msg {:keys [result-q]}]
+                                 (Thread/sleep 500)
+                                 (->> msg
+                                      (future/map extract-payload)
+                                      (future/map upcases)
+                                      (future/map #(publish % result-q)))))))
+
+(facts "when mocking RabbitMQ's queue"
+  (fact "subscribes correctly to messages"
+    (components/mocked
+      (a-function)
+      (components/send! (:test @rabbit/queues) {:payload "message"})
+      (-> @rabbit/queues :test-result :messages deref)
+      => (just [(contains {:payload "MESSAGE"})]))))

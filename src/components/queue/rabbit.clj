@@ -106,20 +106,50 @@
                            :durable true
                            :ttl (* 24 60 60 1000)})
 
+(defn- real-rabbit-queue [name opts cid]
+  (when-not @connection (connect!))
+  (let [opts (merge default-queue-params opts)
+        dead-letter-name (str name "-dlx")
+        dead-letter-q-name (str name "-deadletter")]
+
+    (queue/declare @channel name (-> opts
+                                     (dissoc :max-retries :ttl)
+                                     (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
+                                                        "x-message-ttl" (:ttl opts)})))
+    (queue/declare @channel dead-letter-q-name
+                   {:durable true :auto-delete false :exclusive false})
+
+    (exchange/fanout @channel dead-letter-name {:durable true})
+    (queue/bind @channel dead-letter-q-name dead-letter-name)
+    (->Queue @channel name (:max-retries opts) cid)))
+
+(def queues (atom {}))
+
+(defrecord FakeQueue [messages cid]
+  components/IO
+
+  (listen [self function]
+    (add-watch messages :some-id (fn [_ _ _ actual]
+                                   (let [msg (peek actual)]
+                                     (when (and (not= msg :ACK) (not= msg :REJECT))
+                                       (function msg))))))
+
+  (send! [_ {:keys [payload meta] :or {meta {}}}]
+    (swap! messages conj {:payload payload :meta (assoc meta :cid cid)}))
+
+  (ack! [_ {:keys [meta]}]
+    (swap! messages conj :ACK))
+
+  (reject! [self msg ex]
+    (swap! messages conj :REJECT)))
+
+(defn- mocked-rabbit-queue [name cid]
+  (let [mock-queue (->FakeQueue (atom []) cid)]
+    (swap! queues assoc (keyword name) mock-queue)
+    mock-queue))
+
 (defn queue [name & {:as opts}]
   (fn [{:keys [cid mocked]}]
-    (when-not @connection (connect!))
-    (let [opts (merge default-queue-params opts)
-          dead-letter-name (str name "-dlx")
-          dead-letter-q-name (str name "-deadletter")]
-
-      (queue/declare @channel name (-> opts
-                                       (dissoc :max-retries :ttl)
-                                       (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
-                                                          "x-message-ttl" (:ttl opts)})))
-      (queue/declare @channel dead-letter-q-name
-                     {:durable true :auto-delete false :exclusive false})
-
-      (exchange/fanout @channel dead-letter-name {:durable true})
-      (queue/bind @channel dead-letter-q-name dead-letter-name)
-      (->Queue @channel name (:max-retries opts) cid))))
+    (if mocked
+      (mocked-rabbit-queue name cid)
+      (real-rabbit-queue name opts cid))))
