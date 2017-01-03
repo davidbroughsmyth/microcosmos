@@ -21,7 +21,7 @@
               fut-value))
 
 (def sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
-                                    :logger (components.logging/->DebugLogger)))
+                                    :logger (fn [_] (components.logging/->DebugLogger "FOO"))))
 
 (defn in-future [f]
   (fn [future _]
@@ -30,7 +30,7 @@
 (defn send-messages [msgs]
   (let [test-queue (rabbit/queue "test" :auto-delete true :max-retries 1)
         result-queue (rabbit/queue "test-result" :auto-delete true)
-        deadletter-queue (rabbit/->Queue (:channel test-queue) "test-deadletter" 1000 "FOO")]
+        deadletter-queue (fn [_] (rabbit/->Queue @rabbit/channel "test-deadletter" 1000 "FOO"))]
     (sub test-queue send-msg)
     (sub result-queue (in-future #(do
                                     (swap! all-processed conj %)
@@ -39,7 +39,7 @@
                                     (deliver @last-promise %))))
     (sub deadletter-queue (in-future #(swap! all-deadletters conj %)))
     (doseq [msg msgs]
-      (components/send! (cid/append-cid test-queue "FOO") msg))))
+      (components/send! (test-queue {:cid "FOO"}) msg))))
 
 (defn send-and-wait [ & msgs]
   (send-messages msgs)
@@ -65,6 +65,7 @@
     (get-in (send-and-wait {:payload "msg"}) [:meta :cid]) => "FOO.BAR")
 
   (against-background
+    (components/generate-cid nil) => "FOO"
     (components/generate-cid "FOO") => "FOO.BAR"
     (components/generate-cid "FOO.BAR") => ..irrelevant..
     (before :facts (prepare-tests))
@@ -82,5 +83,5 @@
   (future-fact "don't process anything if old server died (but mark to retry later)")
 
   (against-background
-   (before :facts (prepare-tests))
-   (after :facts (rabbit/disconnect!))))
+    (before :facts (prepare-tests))
+    (after :facts (rabbit/disconnect!))))

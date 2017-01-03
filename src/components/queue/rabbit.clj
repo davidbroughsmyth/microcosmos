@@ -76,16 +76,13 @@
     (let [meta (:meta msg)
           retries (-> meta :retries (or 0))
           tag (:delivery-tag meta)
-          cid (:cid meta)]
+          old-cid (:cid meta)]
       (if (>= retries max-retries)
         (basic/reject channel tag false)
         (do
           (basic/ack channel tag)
-          (components/send! (cid/append-cid self cid)
-                            (assoc-in msg [:meta :retries] (inc retries)))))))
-
-  cid/CID
-    (append-cid [rabbit cid] (->Queue channel name max-retries cid)))
+          (components/send! (->Queue channel name max-retries old-cid)
+                            (assoc-in msg [:meta :retries] (inc retries))))))))
 
 
 (def connection (atom nil))
@@ -110,18 +107,19 @@
                            :ttl (* 24 60 60 1000)})
 
 (defn queue [name & {:as opts}]
-  (when-not @connection (connect!))
-  (let [opts (merge default-queue-params opts)
-        dead-letter-name (str name "-dlx")
-        dead-letter-q-name (str name "-deadletter")]
+  (fn [{:keys [cid mocked]}]
+    (when-not @connection (connect!))
+    (let [opts (merge default-queue-params opts)
+          dead-letter-name (str name "-dlx")
+          dead-letter-q-name (str name "-deadletter")]
 
-    (queue/declare @channel name (-> opts
-                                     (dissoc :max-retries :ttl)
-                                     (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
-                                                        "x-message-ttl" (:ttl opts)})))
-    (queue/declare @channel dead-letter-q-name
-                   {:durable true :auto-delete false :exclusive false})
+      (queue/declare @channel name (-> opts
+                                       (dissoc :max-retries :ttl)
+                                       (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
+                                                          "x-message-ttl" (:ttl opts)})))
+      (queue/declare @channel dead-letter-q-name
+                     {:durable true :auto-delete false :exclusive false})
 
-    (exchange/fanout @channel dead-letter-name {:durable true})
-    (queue/bind @channel dead-letter-q-name dead-letter-name)
-    (->Queue @channel name (:max-retries opts) nil)))
+      (exchange/fanout @channel dead-letter-name {:durable true})
+      (queue/bind @channel dead-letter-q-name dead-letter-name)
+      (->Queue @channel name (:max-retries opts) cid))))
