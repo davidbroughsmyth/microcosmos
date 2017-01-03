@@ -2,7 +2,6 @@
   (:require [cheshire.core :as json]
             [cheshire.generate :as generators]
             [clojure.core :as clj]
-            [components.cid :as cid]
             [components.core :as components]
             [langohr.basic :as basic]
             [langohr.channel :as channel]

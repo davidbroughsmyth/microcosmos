@@ -2,8 +2,7 @@
   (:require [midje.sweet :refer :all]
             [components.core :as components]
             [components.future :as future]
-            [components.logging :as log]
-            [components.cid :as cid]))
+            [components.logging :as log]))
 
 (defn fake-component [other]
   (let [fn (atom nil)]
@@ -20,8 +19,7 @@
     (log [_ msg type data]
          (reset! log-output {:msg msg :type type :data (assoc data :cid cid)}))))
 
-(def subscribe (components/subscribe-with
-                 :logger logger))
+(def subscribe (components/subscribe-with :logger logger))
 
 (facts "when subscribing for new messages"
   (let [last-msg (atom nil)

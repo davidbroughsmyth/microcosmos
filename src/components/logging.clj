@@ -1,7 +1,6 @@
 (ns components.logging
   (:require [cheshire.core :as cheshire]
-            [cheshire.generate :as generators]
-            [components.cid :as cid]))
+            [cheshire.generate :as generators]))
 
 (defprotocol Log
   (log [_ message type data]

@@ -1,13 +1,11 @@
 (ns strange-sum
   (:require [components.core :as components]
+            [components.logging :as log]
             [components.future :as future]
-            [components.cid :as cid]
             [components.queue.rabbit :as rabbit]))
 
-
 (def sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
-                                    :logger (components.logging/->DebugLogger)))
-
+                                    :logger log/default-logger-gen))
 
 (defn normalize-payload [message]
   (let [payload (:payload message)
@@ -33,7 +31,7 @@
 
 #_(
    (doseq [_ (range 100)]
-     (components/send! (cid/append-cid (rabbit/queue "sum") "FOOCID")
+     (components/send! ((rabbit/queue "sum") {:cid  "FOOCID"})
                        {:payload {:n1 10001000 :n2 20}})))
 
 (sub (rabbit/queue "test-result" :auto-delete true)

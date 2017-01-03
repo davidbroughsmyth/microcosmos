@@ -1,6 +1,5 @@
 (ns components.queue.rabbit-test
   (:require [components.core :as components]
-            [components.cid :as cid]
             [components.future :as future]
             [components.queue.rabbit :as rabbit]
             [cheshire.core :as json]

@@ -1,7 +1,6 @@
 (ns components.core
   (:require [components.future :as future]
-            [components.logging :as log]
-            [components.cid :as cid]))
+            [components.logging :as log]))
 
 (defprotocol IO
   (listen [component function]
