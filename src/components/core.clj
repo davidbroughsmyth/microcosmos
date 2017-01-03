@@ -24,21 +24,12 @@ Some services can choose to ignore this.")
 occurred, and some action should be done. Some services can choose to ignore
 this"))
 
-(defn generate-cid [old-cid]
-  (let [upcase-chars (map char (range (int \A) (inc (int \Z))))
-        digits (range 10)
-        alfa-digits (cycle (map str (concat upcase-chars digits)))
-        cid-gen #(apply str (take % (random-sample 0.02 alfa-digits)))]
-    (if old-cid
-      (str old-cid "." (cid-gen 5))
-      (cid-gen 8))))
-
 (defn subscribe-with [ & {:as components}]
   (let [components (update components :logger #(or % log/default-logger))]
     (fn [component callback]
       (listen component (fn [data]
                           (let [cid (get-in data [:meta :cid])
-                                new-cid (generate-cid cid)
+                                new-cid (cid/generate-cid cid)
                                 components (->> components
                                                 (map (fn [[k v]] [k (cid/append-cid v new-cid)]))
                                                 (into {}))]
