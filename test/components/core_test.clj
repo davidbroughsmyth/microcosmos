@@ -49,7 +49,7 @@
         (components/send! component "some-msg")
         @log-output) => {:msg "Foo", :type :info, :data {:cid "FOOBAR"}}
       (provided
-        (components/generate-cid nil) => "FOOBAR"))
+        (cid/generate-cid nil) => "FOOBAR"))
 
     (fact "logs when processing a message"
       (subscribe component (fn [a _] a))
