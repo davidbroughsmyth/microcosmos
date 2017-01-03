@@ -1,6 +1,6 @@
 # Components
 
-General components to be reusable in every Clojure webservice
+General components to be reusable in every Clojure micro-service
 
 ## Usage
 
