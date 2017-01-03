@@ -40,22 +40,23 @@ this"))
 
 (defn subscribe-with [ & {:as components-generators}]
   (let [components-generators (update components-generators :logger #(or % log/default-logger-gen))]
-    (fn [component callback]
-      (listen component (fn [data]
-                          (let [params (params-for-generators data)
-                                components (->> components-generators
-                                                (map (fn [[k generator]] [k (generator params)]))
-                                                (into {}))]
-                            (log/info (:logger components)
-                                      "Processing message"
-                                      :msg data)
-                            (->> (callback (future/just data) components)
-                                 (future/on-success (fn [_] (ack! component data)))
-                                 (future/on-failure (fn [ex]
-                                                      (log/fatal (:logger components)
-                                                                 "Uncaught Exception"
-                                                                 :ex ex)
-                                                      (reject! component data ex))))))))))
+    (fn [io-gen callback]
+      (let [component (io-gen (params-for-generators {}))]
+        (listen component (fn [data]
+                            (let [params (params-for-generators data)
+                                  components (->> components-generators
+                                                  (map (fn [[k generator]] [k (generator params)]))
+                                                  (into {}))]
+                              (log/info (:logger components)
+                                        "Processing message"
+                                        :msg data)
+                              (->> (callback (future/just data) components)
+                                   (future/on-success (fn [_] (ack! component data)))
+                                   (future/on-failure (fn [ex]
+                                                        (log/fatal (:logger components)
+                                                                   "Uncaught Exception"
+                                                                   :ex ex)
+                                                        (reject! component data ex)))))))))))
 
 (defmacro mocked [ & args]
   `(let [function# ~params-for-generators]
