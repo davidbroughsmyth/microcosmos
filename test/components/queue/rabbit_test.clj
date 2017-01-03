@@ -30,7 +30,8 @@
 (defn send-messages [msgs]
   (let [test-queue (rabbit/queue "test" :auto-delete true :max-retries 1)
         result-queue (rabbit/queue "test-result" :auto-delete true)
-        deadletter-queue (fn [_] (rabbit/->Queue @rabbit/channel "test-deadletter" 1000 "FOO"))]
+        channel (:channel (result-queue {}))
+        deadletter-queue (fn [_] (rabbit/->Queue channel "test-deadletter" 1000 "FOO"))]
     (sub test-queue send-msg)
     (sub result-queue (in-future #(do
                                     (swap! all-processed conj %)
@@ -47,7 +48,6 @@
                              :meta :timeout}))
 
 (defn prepare-tests []
-  (rabbit/connect!)
   (reset! last-promise (promise))
   (reset! all-msgs [])
   (reset! all-processed [])

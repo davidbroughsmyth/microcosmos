@@ -9,7 +9,8 @@
             [langohr.consumers :as consumers]
             [langohr.core :as core]
             [langohr.exchange :as exchange]
-            [langohr.queue :as queue])
+            [langohr.queue :as queue]
+            [environ.core :refer [env]])
   (:import [com.rabbitmq.client LongString]))
 
 (generators/add-encoder LongString generators/encode-str)
@@ -84,20 +85,37 @@
           (components/send! (->Queue channel name max-retries old-cid)
                             (assoc-in msg [:meta :retries] (inc retries))))))))
 
+(def connections (atom {}))
 
-(def connection (atom nil))
-(def channel (atom nil))
+(def ^:private rabbit-config {:queues (-> env :rabbit-config json/parse-string)
+                              :hosts (-> env :rabbit-queues json/parse-string)})
 
-(defn connect! []
-  (reset! connection (core/connect))
-  (reset! channel (channel/open @connection)))
+(defn- connection-to-host [host]
+  (let [connect! #(let [connection (core/connect (get-in rabbit-config [:hosts host] {}))
+                        channel (channel/open connection)]
+                    [connection channel])]
+    (if-let [conn (get @connections host)]
+      conn
+      (get (swap! connections assoc host (connect!)) host))))
+
+(defn- connection-to-queue [queue-name]
+  (let [queue-host (get-in rabbit-config [:queues queue-name])]
+    (if queue-host
+      (connection-to-host queue-host)
+      (connection-to-host "localhost"))))
+
+; (defn connect! []
+;
+;   (env :rabbit-config)
+;   (env :rabbit-queues)
+;   (reset! connection (core/connect))
+;   (reset! channel (channel/open @connection)))
 
 (defn disconnect! []
-  (when @connection
-    (core/close @channel)
-    (core/close @connection))
-  (reset! channel nil)
-  (reset! connection nil))
+  (doseq [[_ [connection channel]] @connections]
+    (core/close channel)
+    (core/close connection))
+  (reset! connections {}))
 
 (def default-queue-params {:exclusive false
                            :auto-ack false
@@ -107,21 +125,21 @@
                            :ttl (* 24 60 60 1000)})
 
 (defn- real-rabbit-queue [name opts cid]
-  (when-not @connection (connect!))
-  (let [opts (merge default-queue-params opts)
+  (let [[connection channel] (connection-to-queue name)
+        opts (merge default-queue-params opts)
         dead-letter-name (str name "-dlx")
         dead-letter-q-name (str name "-deadletter")]
 
-    (queue/declare @channel name (-> opts
-                                     (dissoc :max-retries :ttl)
-                                     (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
-                                                        "x-message-ttl" (:ttl opts)})))
-    (queue/declare @channel dead-letter-q-name
+    (queue/declare channel name (-> opts
+                                    (dissoc :max-retries :ttl)
+                                    (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
+                                                       "x-message-ttl" (:ttl opts)})))
+    (queue/declare channel dead-letter-q-name
                    {:durable true :auto-delete false :exclusive false})
 
-    (exchange/fanout @channel dead-letter-name {:durable true})
-    (queue/bind @channel dead-letter-q-name dead-letter-name)
-    (->Queue @channel name (:max-retries opts) cid)))
+    (exchange/fanout channel dead-letter-name {:durable true})
+    (queue/bind channel dead-letter-q-name dead-letter-name)
+    (->Queue channel name (:max-retries opts) cid)))
 
 (def queues (atom {}))
 
