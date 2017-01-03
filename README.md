@@ -39,6 +39,8 @@ RABBIT_CONFIG='{"local-machine":{"host":"localhost"},"remote":{"host":"192.168.0
 RABBIT_QUEUES='{"numbers":"local-machine","results":"remote","other-result":"remote"}'
 ```
 
+The complete list of parameters is located at: http://clojurerabbitmq.info/articles/connecting.html
+
 ## License
 
 Copyright © 2016 AcessoCard
