@@ -144,17 +144,18 @@
 
 (def queues (atom {}))
 
-(defrecord FakeQueue [messages cid]
+(defrecord FakeQueue [messages cid delayed]
   components/IO
 
   (listen [self function]
-    (add-watch messages :some-id (fn [_ _ _ actual]
-                                   (let [msg (peek actual)]
-                                     (when (and (not= msg :ACK) (not= msg :REJECT))
-                                       (function msg))))))
+    (add-watch messages :watch (fn [_ _ _ actual]
+                                 (let [msg (peek actual)]
+                                   (when (and (not= msg :ACK) (not= msg :REJECT))
+                                     (function msg))))))
 
   (send! [_ {:keys [payload meta] :or {meta {}}}]
-    (swap! messages conj {:payload payload :meta (assoc meta :cid cid)}))
+    (when-not (and delayed (some-> meta :x-delay (> 0)))
+      (swap! messages conj {:payload payload :meta (assoc meta :cid cid)})))
 
   (ack! [_ {:keys [meta]}]
     (swap! messages conj :ACK))
@@ -162,13 +163,19 @@
   (reject! [self msg ex]
     (swap! messages conj :REJECT)))
 
-(defn- mocked-rabbit-queue [name cid]
-  (let [mock-queue (->FakeQueue (atom []) cid)]
-    (swap! queues assoc (keyword name) mock-queue)
+(defn- mocked-rabbit-queue [name cid delayed]
+  (let [name-k (keyword name)
+        mock-queue (get @queues name-k (->FakeQueue (atom []) cid delayed))]
+    (swap! queues assoc name-k mock-queue)
     mock-queue))
+
+(defn clear-mocked-env! []
+  (doseq [[_ queue] @queues]
+    (remove-watch (:messages queue) :watch))
+  (reset! queues {}))
 
 (defn queue [name & {:as opts}]
   (fn [{:keys [cid mocked]}]
     (if mocked
-      (mocked-rabbit-queue name cid)
+      (mocked-rabbit-queue name cid (:delayed opts))
       (real-rabbit-queue name opts cid))))
