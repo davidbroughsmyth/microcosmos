@@ -150,7 +150,10 @@
   (listen [self function]
     (add-watch messages :watch (fn [_ _ _ actual]
                                  (let [msg (peek actual)]
-                                   (when (and (not= msg :ACK) (not= msg :REJECT))
+                                   (when (and (not= msg :ACK)
+                                              (not= msg :REJECT)
+                                              (not (and delayed
+                                                        (some-> meta :x-delay (> 0)))))
                                      (function msg))))))
 
   (send! [_ {:keys [payload meta] :or {meta {}}}]
