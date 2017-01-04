@@ -53,21 +53,25 @@
       (>= retries max-retries) (reject-msg)
       :requeue-message (do (ack-msg) (requeue-msg)))))
 
-(defrecord Queue [channel name max-retries cid]
+(defn- raise-error []
+  (throw (IllegalArgumentException.
+           (str "Can't publish to queue without CID. Maybe you tried to send a message "
+                "using `queue` from components' namespace. Prefer to use the"
+                "components' attribute to create one."))))
+
+(defrecord Queue [channel delayed name max-retries cid]
   components/IO
   (listen [self function]
     (let [callback (partial callback-payload function max-retries self)]
       (consumers/subscribe channel name callback)))
 
   (send! [_ {:keys [payload meta] :or {meta {}}}]
-    (if cid
-      (basic/publish channel "" name
-                     (json/encode payload)
-                     (assoc meta :headers (normalize-headers (assoc meta :cid cid))))
-      (throw (IllegalArgumentException.
-               (str "Can't publish to queue without CID. Maybe you tried to send a message "
-                    "using `queue` from components' namespace. Prefer to use the"
-                    "components' attribute to create one.")))))
+    (when-not cid (raise-error))
+    (let [payload (json/encode payload)
+          meta (assoc meta :headers (normalize-headers (assoc meta :cid cid)))]
+      (if delayed
+        (basic/publish channel name "" payload meta)
+        (basic/publish channel "" name payload meta))))
 
   (ack! [_ {:keys [meta]}]
         (basic/ack channel (:delivery-tag meta)))
@@ -81,7 +85,7 @@
         (basic/reject channel tag false)
         (do
           (basic/ack channel tag)
-          (components/send! (->Queue channel name max-retries old-cid)
+          (components/send! (->Queue channel delayed name max-retries old-cid)
                             (assoc-in msg [:meta :retries] (inc retries))))))))
 
 (def connections (atom {}))
@@ -102,13 +106,6 @@
     (if queue-host
       (connection-to-host queue-host)
       (connection-to-host "localhost"))))
-
-; (defn connect! []
-;
-;   (env :rabbit-config)
-;   (env :rabbit-queues)
-;   (reset! connection (core/connect))
-;   (reset! channel (channel/open @connection)))
 
 (defn disconnect! []
   (doseq [[_ [connection channel]] @connections]
@@ -136,9 +133,14 @@
     (queue/declare channel dead-letter-q-name
                    {:durable true :auto-delete false :exclusive false})
 
+    (when (:delayed opts)
+      (exchange/declare channel name "x-delayed-message"
+                        {:arguments {"x-delayed-type" "direct"}})
+      (queue/bind channel name name))
+
     (exchange/fanout channel dead-letter-name {:durable true})
     (queue/bind channel dead-letter-q-name dead-letter-name)
-    (->Queue channel name (:max-retries opts) cid)))
+    (->Queue channel (:delayed opts) name (:max-retries opts) cid)))
 
 (def queues (atom {}))
 
