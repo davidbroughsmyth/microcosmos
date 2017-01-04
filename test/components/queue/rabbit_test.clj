@@ -1,6 +1,5 @@
 (ns components.queue.rabbit-test
   (:require [components.core :as components]
-            [components.cid :as cid]
             [components.future :as future]
             [components.queue.rabbit :as rabbit]
             [cheshire.core :as json]
@@ -21,7 +20,7 @@
               fut-value))
 
 (def sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
-                                    :logger (components.logging/->DebugLogger)))
+                                    :logger (fn [_] (components.logging/->DebugLogger "FOO"))))
 
 (defn in-future [f]
   (fn [future _]
@@ -30,7 +29,8 @@
 (defn send-messages [msgs]
   (let [test-queue (rabbit/queue "test" :auto-delete true :max-retries 1)
         result-queue (rabbit/queue "test-result" :auto-delete true)
-        deadletter-queue (rabbit/->Queue (:channel test-queue) "test-deadletter" 1000 "FOO")]
+        channel (:channel (result-queue {}))
+        deadletter-queue (fn [_] (rabbit/->Queue channel "test-deadletter" 1000 "FOO"))]
     (sub test-queue send-msg)
     (sub result-queue (in-future #(do
                                     (swap! all-processed conj %)
@@ -39,7 +39,7 @@
                                     (deliver @last-promise %))))
     (sub deadletter-queue (in-future #(swap! all-deadletters conj %)))
     (doseq [msg msgs]
-      (components/send! (cid/append-cid test-queue "FOO") msg))))
+      (components/send! (test-queue {:cid "FOO"}) msg))))
 
 (defn send-and-wait [ & msgs]
   (send-messages msgs)
@@ -47,7 +47,6 @@
                              :meta :timeout}))
 
 (defn prepare-tests []
-  (rabbit/connect!)
   (reset! last-promise (promise))
   (reset! all-msgs [])
   (reset! all-processed [])
@@ -65,6 +64,7 @@
     (get-in (send-and-wait {:payload "msg"}) [:meta :cid]) => "FOO.BAR")
 
   (against-background
+    (components/generate-cid nil) => "FOO"
     (components/generate-cid "FOO") => "FOO.BAR"
     (components/generate-cid "FOO.BAR") => ..irrelevant..
     (before :facts (prepare-tests))
@@ -82,5 +82,24 @@
   (future-fact "don't process anything if old server died (but mark to retry later)")
 
   (against-background
-   (before :facts (prepare-tests))
-   (after :facts (rabbit/disconnect!))))
+    (before :facts (prepare-tests))
+    (after :facts (rabbit/disconnect!))))
+
+; Mocks
+(defn a-function []
+  (let [extract-payload :payload
+        upcases #(clojure.string/upper-case %)
+        publish #(components/send! %2 {:payload %1})]
+    (sub (rabbit/queue "test") (fn [msg {:keys [result-q]}]
+                                 (->> msg
+                                      (future/map extract-payload)
+                                      (future/map upcases)
+                                      (future/map #(publish % result-q)))))))
+
+(facts "when mocking RabbitMQ's queue"
+  (fact "subscribes correctly to messages"
+    (components/mocked
+      (a-function)
+      (components/send! (:test @rabbit/queues) {:payload "message"})
+      (-> @rabbit/queues :test-result :messages deref)
+      => (just [(contains {:payload "MESSAGE"})]))))

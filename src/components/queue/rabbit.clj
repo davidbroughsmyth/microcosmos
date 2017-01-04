@@ -2,14 +2,14 @@
   (:require [cheshire.core :as json]
             [cheshire.generate :as generators]
             [clojure.core :as clj]
-            [components.cid :as cid]
             [components.core :as components]
             [langohr.basic :as basic]
             [langohr.channel :as channel]
             [langohr.consumers :as consumers]
             [langohr.core :as core]
             [langohr.exchange :as exchange]
-            [langohr.queue :as queue])
+            [langohr.queue :as queue]
+            [environ.core :refer [env]])
   (:import [com.rabbitmq.client LongString]))
 
 (generators/add-encoder LongString generators/encode-str)
@@ -76,31 +76,45 @@
     (let [meta (:meta msg)
           retries (-> meta :retries (or 0))
           tag (:delivery-tag meta)
-          cid (:cid meta)]
+          old-cid (:cid meta)]
       (if (>= retries max-retries)
         (basic/reject channel tag false)
         (do
           (basic/ack channel tag)
-          (components/send! (cid/append-cid self cid)
-                            (assoc-in msg [:meta :retries] (inc retries)))))))
+          (components/send! (->Queue channel name max-retries old-cid)
+                            (assoc-in msg [:meta :retries] (inc retries))))))))
 
-  cid/CID
-    (append-cid [rabbit cid] (->Queue channel name max-retries cid)))
+(def connections (atom {}))
 
+(def ^:private rabbit-config {:queues (-> env :rabbit-config json/parse-string)
+                              :hosts (-> env :rabbit-queues json/parse-string)})
 
-(def connection (atom nil))
-(def channel (atom nil))
+(defn- connection-to-host [host]
+  (let [connect! #(let [connection (core/connect (get-in rabbit-config [:hosts host] {}))
+                        channel (channel/open connection)]
+                    [connection channel])]
+    (if-let [conn (get @connections host)]
+      conn
+      (get (swap! connections assoc host (connect!)) host))))
 
-(defn connect! []
-  (reset! connection (core/connect))
-  (reset! channel (channel/open @connection)))
+(defn- connection-to-queue [queue-name]
+  (let [queue-host (get-in rabbit-config [:queues queue-name])]
+    (if queue-host
+      (connection-to-host queue-host)
+      (connection-to-host "localhost"))))
+
+; (defn connect! []
+;
+;   (env :rabbit-config)
+;   (env :rabbit-queues)
+;   (reset! connection (core/connect))
+;   (reset! channel (channel/open @connection)))
 
 (defn disconnect! []
-  (when @connection
-    (core/close @channel)
-    (core/close @connection))
-  (reset! channel nil)
-  (reset! connection nil))
+  (doseq [[_ [connection channel]] @connections]
+    (core/close channel)
+    (core/close connection))
+  (reset! connections {}))
 
 (def default-queue-params {:exclusive false
                            :auto-ack false
@@ -109,19 +123,50 @@
                            :durable true
                            :ttl (* 24 60 60 1000)})
 
-(defn queue [name & {:as opts}]
-  (when-not @connection (connect!))
-  (let [opts (merge default-queue-params opts)
+(defn- real-rabbit-queue [name opts cid]
+  (let [[connection channel] (connection-to-queue name)
+        opts (merge default-queue-params opts)
         dead-letter-name (str name "-dlx")
         dead-letter-q-name (str name "-deadletter")]
 
-    (queue/declare @channel name (-> opts
-                                     (dissoc :max-retries :ttl)
-                                     (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
-                                                        "x-message-ttl" (:ttl opts)})))
-    (queue/declare @channel dead-letter-q-name
+    (queue/declare channel name (-> opts
+                                    (dissoc :max-retries :ttl)
+                                    (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
+                                                       "x-message-ttl" (:ttl opts)})))
+    (queue/declare channel dead-letter-q-name
                    {:durable true :auto-delete false :exclusive false})
 
-    (exchange/fanout @channel dead-letter-name {:durable true})
-    (queue/bind @channel dead-letter-q-name dead-letter-name)
-    (->Queue @channel name (:max-retries opts) nil)))
+    (exchange/fanout channel dead-letter-name {:durable true})
+    (queue/bind channel dead-letter-q-name dead-letter-name)
+    (->Queue channel name (:max-retries opts) cid)))
+
+(def queues (atom {}))
+
+(defrecord FakeQueue [messages cid]
+  components/IO
+
+  (listen [self function]
+    (add-watch messages :some-id (fn [_ _ _ actual]
+                                   (let [msg (peek actual)]
+                                     (when (and (not= msg :ACK) (not= msg :REJECT))
+                                       (function msg))))))
+
+  (send! [_ {:keys [payload meta] :or {meta {}}}]
+    (swap! messages conj {:payload payload :meta (assoc meta :cid cid)}))
+
+  (ack! [_ {:keys [meta]}]
+    (swap! messages conj :ACK))
+
+  (reject! [self msg ex]
+    (swap! messages conj :REJECT)))
+
+(defn- mocked-rabbit-queue [name cid]
+  (let [mock-queue (->FakeQueue (atom []) cid)]
+    (swap! queues assoc (keyword name) mock-queue)
+    mock-queue))
+
+(defn queue [name & {:as opts}]
+  (fn [{:keys [cid mocked]}]
+    (if mocked
+      (mocked-rabbit-queue name cid)
+      (real-rabbit-queue name opts cid))))
