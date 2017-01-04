@@ -91,7 +91,6 @@
         upcases #(clojure.string/upper-case %)
         publish #(components/send! %2 {:payload %1})]
     (sub (rabbit/queue "test") (fn [msg {:keys [result-q]}]
-                                 (Thread/sleep 500)
                                  (->> msg
                                       (future/map extract-payload)
                                       (future/map upcases)
