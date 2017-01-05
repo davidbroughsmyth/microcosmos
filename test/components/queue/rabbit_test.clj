@@ -86,20 +86,31 @@
     (after :facts (rabbit/disconnect!))))
 
 ; Mocks
-(defn a-function []
+(defn a-function [test-q]
   (let [extract-payload :payload
         upcases #(clojure.string/upper-case %)
         publish #(components/send! %2 {:payload %1})]
-    (sub (rabbit/queue "test") (fn [msg {:keys [result-q]}]
-                                 (->> msg
-                                      (future/map extract-payload)
-                                      (future/map upcases)
-                                      (future/map #(publish % result-q)))))))
+    (sub test-q (fn [msg {:keys [result-q]}]
+                  (->> msg
+                       (future/map extract-payload)
+                       (future/map upcases)
+                       (future/map #(publish % result-q)))))))
 
 (facts "when mocking RabbitMQ's queue"
   (fact "subscribes correctly to messages"
     (components/mocked
-      (a-function)
+      (a-function (rabbit/queue "test"))
       (components/send! (:test @rabbit/queues) {:payload "message"})
       (-> @rabbit/queues :test-result :messages deref)
-      => (just [(contains {:payload "MESSAGE"})]))))
+      => (just [(contains {:payload "MESSAGE"})])))
+
+  (fact "ignores delayed messages"
+    (components/mocked
+      (a-function (rabbit/queue "test" :delayed true))
+      (components/send! (:test @rabbit/queues) {:payload "msg one"})
+      (components/send! (:test @rabbit/queues) {:payload "msg two", :meta {:x-delay 400}})
+      (-> @rabbit/queues :test-result :messages deref)
+      => (just [(contains {:payload "MSG ONE"})])))
+
+  (background
+    (after :facts (rabbit/clear-mocked-env!))))

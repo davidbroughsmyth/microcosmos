@@ -4,8 +4,11 @@
             [components.future :as future]
             [components.queue.rabbit :as rabbit]))
 
+(defn logger [{:keys [cid]}]
+  (log/->DebugLogger cid))
+
 (def sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
-                                    :logger log/default-logger-gen))
+                                    :logger logger))
 
 (defn normalize-payload [message]
   (let [payload (:payload message)
@@ -24,12 +27,12 @@
 (defn process-sum [future {:keys [result-q]}]
   (->> future
       (future/map normalize-payload)
-      (future/flat-map #(future/execute (sum %)))
+      (future/map sum)
       (future/map #(publish-result % result-q))))
 
 (sub (rabbit/queue "sum") process-sum)
 
-#_(
+(comment
    (doseq [_ (range 100)]
      (components/send! ((rabbit/queue "sum") {:cid  "FOOCID"})
                        {:payload {:n1 10001000 :n2 20}})))
