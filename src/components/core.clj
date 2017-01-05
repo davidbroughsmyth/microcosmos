@@ -48,7 +48,7 @@ this"))
                      (log/fatal logger "Uncaught Exception" :ex ex)
                      (reject! io-component data ex))]
     (log/info logger "Processing message" :msg data)
-    (->> (callback (future/just data) components)
+    (->> (callback (future/execute data) components)
          (future/on-success ack-msg)
          (future/on-failure reject-msg))))
 

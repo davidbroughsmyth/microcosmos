@@ -8,7 +8,7 @@
 
 (def ^:private cpus (.availableProcessors (Runtime/getRuntime)))
 (defonce pool (fut-pool/future-pool
-                (Executors/newFixedThreadPool (+ 2 (* cpus 2)))))
+                (Executors/newFixedThreadPool (* cpus 2))))
 
 (defn map [fun & objs]
   (fut-finagle/map* (fut-finagle/collect objs) #(apply fun %)))
