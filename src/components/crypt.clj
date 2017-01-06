@@ -71,3 +71,13 @@
         (recur
           (+ processed block-size)
           (fun cipher-text processed block-size))))))
+
+(defn asymmetric-enc [txt key]
+  (let [bytes (.getBytes txt "UTF-8")
+        public-key (PublicKeyFactory/createKey (.getEncoded key))]
+    (Base64/encodeBase64String (encrypt-or-decrypt bytes public-key true))))
+
+(defn asymmetric-dec [txt key]
+  (let [bytes (Base64/decodeBase64 txt)
+        private-key (PrivateKeyFactory/createKey (.getEncoded key))]
+    (String. (encrypt-or-decrypt bytes private-key false) "UTF-8")))
