@@ -1,6 +1,7 @@
 (ns components.core
   (:require [components.future :as future]
-            [components.logging :as log]))
+            [components.logging :as log]
+            [finagle-clojure.future-pool :as fut-pool]))
 
 (defprotocol IO
   (listen [component function]
@@ -86,5 +87,6 @@ or failure"
 
 (defmacro mocked [ & args]
   `(let [function# ~params-for-generators]
-     (with-redefs [params-for-generators #(assoc (function# %) :mocked true)]
+     (with-redefs [params-for-generators #(assoc (function# %) :mocked true)
+                   future/pool (fut-pool/immediate-future-pool)]
        ~(cons `do args))))
