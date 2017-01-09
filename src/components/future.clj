@@ -1,10 +1,12 @@
 (ns components.future
   (:refer-clojure :exclude [map])
   (:require [finagle-clojure.futures :as fut-finagle]
-            [finagle-clojure.future-pool :as fut-pool])
+            [finagle-clojure.future-pool :as fut-pool]
+            [clojure.core :as core])
   (:import  [java.util.concurrent Executors]))
 
 (def just fut-finagle/value)
+(def join fut-finagle/collect)
 
 (def ^:private cpus (.availableProcessors (Runtime/getRuntime)))
 (defonce pool (fut-pool/future-pool
@@ -28,3 +30,9 @@
 
 (defmacro execute [ & args]
   `(fut-pool/run* pool ~(cons `fn (cons [] args))))
+
+(defn map-fork [future fun & funs]
+  (->> funs
+       (core/map #(map % future))
+       (cons (map fun future))
+       vec))

@@ -18,7 +18,12 @@
 
   (fact "flattens nested futures with flat-map"
     (let [fut (future/just 10)]
-      (future/flat-map #(future/just (+ % 10)) fut) => (future= 20))))
+      (future/flat-map #(future/just (+ % 10)) fut) => (future= 20)))
+
+  (fact "forks multiple operations, and joins then together"
+    (let [fut (future/just 10)
+          results (future/map-fork fut #(+ % 10) #(+ % 20))]
+      (future/join results) => (future= [20 30]))))
 
 (facts "when listening to futures"
   (let [res (atom nil)
