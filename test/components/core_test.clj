@@ -60,8 +60,18 @@
       (subscribe component-gen (fn [f _] (future/map #(Integer/parseInt %) f)))
       (components/send! component "ten")
       @log-output => (contains {:type :fatal, :data (contains {:cid string?
-                                                               :ex anything})}))))
+                                                               :ex anything})}))
 
+    (fact "allows to run some code when message processing ends"
+      (let [ran (atom nil)
+            subscribe (components/subscribe-with :logger logger
+                                                 :comp (fn [{:keys [teardown]}]
+                                                         (println "Defining TEARDOWN")
+                                                         (teardown (fn []
+                                                                     (reset! ran :yes)))))]
+        (subscribe component-gen (fn [f _] (future/map #(Integer/parseInt %) f)))
+        (components/send! component "ten")
+        @ran => :yes))))
 
 ; Mocking section
 (def queue (atom nil))

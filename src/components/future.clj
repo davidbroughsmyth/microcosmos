@@ -28,6 +28,11 @@
                                                          (fun %)
                                                          nil)))
 
+(defn on-finish [fun & objs]
+  (fut-finagle/ensure* (fut-finagle/collect objs) #(do
+                                                     (fun)
+                                                     nil)))
+
 (defmacro execute [ & args]
   `(fut-pool/run* pool ~(cons `fn (cons [] args))))
 
