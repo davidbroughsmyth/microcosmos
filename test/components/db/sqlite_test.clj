@@ -9,16 +9,9 @@
 (defn mocked-db [db]
   (db/execute! db "CREATE TABLE tests (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
   (db/execute! db "INSERT INTO tests VALUES (:id, :name)" {:id "foo" :name "bar"}))
-;
-;
-; (def teardowns (atom []))
-; (defn teardown [f] (swap! teardowns conj f))
 
 (facts "about sqlite environment"
-  ; (let [db (sqlite/adapter {:file "__test__.db"} {:teardown teardown})])
   (let [db (sqlite/adapter {:file "__test__.db"} {})]
-    ; (fact "adds a teardown fn"
-    ;   @teardowns => not-empty)
     (fact "can execute queries that have no results"
       (db/execute! db "CREATE TABLE foo (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
       (db/execute! db "INSERT INTO foo VALUES (:id, :name)" {:id "foo" :name "bar"}) => [1])
@@ -44,7 +37,3 @@
     (after :facts (do
                     (io/delete-file "__test__.db" true)
                     (reset! sqlite/all-pools {})))))
-                    ; (doseq [t @teardowns] (t))
-                    ; (reset! teardowns [])))))
-                    ; (reset! sqlite/prepare-mem-db)))))
-; (slurp "__test__.db")
