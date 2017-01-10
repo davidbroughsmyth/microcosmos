@@ -4,8 +4,8 @@
 (def adapter-fns (atom {}))
 
 (defprotocol RelationalDatabase
-  (execute! [db sql-command] [db sql-command params])
-  (query [db sql-query] [db sql-query params]))
+  (execute-command! [db sql-command])
+  (query-database [db sql-query]))
 
 (defn connect-to [ & {:as connection-params}]
   (fn [params]
@@ -27,3 +27,11 @@
          (map #(get params (keyword (str/replace-first % #":" ""))))
          (cons (str/replace sql re "?"))
          vec)))
+
+(defn execute!
+  ([db sql-command] (execute-command! db [sql-command]))
+  ([db sql-command params] (execute-command! db (normalize sql-command params))))
+
+(defn query
+  ([db sql-command] (query-database db [sql-command]))
+  ([db sql-command params] (query-database db (normalize sql-command params))))
