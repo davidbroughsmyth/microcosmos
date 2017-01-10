@@ -35,6 +35,15 @@
   ([db sql-command] (execute-command! db [sql-command]))
   ([db sql-command params] (execute-command! db (normalize sql-command params))))
 
+(defn insert! [db table attributes]
+  (let [keys (keys attributes)
+        fields (map name keys)]
+    (execute! db
+              (str "INSERT INTO " table
+                   "(" (str/join "," fields) ")"
+                   " VALUES(" (str/join "," keys) ")")
+              attributes)))
+
 (defn query
   ([db sql-command] (query-database db [sql-command]))
   ([db sql-command params] (query-database db (normalize sql-command params))))

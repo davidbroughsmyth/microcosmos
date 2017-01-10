@@ -17,6 +17,11 @@
                                               {:id "bar" :name "baz"}]})]
       (db/query db "SELECT * FROM tests WHERE id=:id" {:id "foo"}) => [{:id "foo" :name "bar"}]))
 
+  (fact "inserts data into DB"
+    (let [db (db/fake-rows mocked-db {})]
+      (db/insert! db "tests" {:id "nothing" :name "at all"})
+      (db/query db "SELECT * FROM tests") => [{:id "nothing" :name "at all"}]))
+
   (fact "allow transactions"
     (let [db (db/fake-rows mocked-db {:tests [{:id "foo" :name "bar"}]})]
       (db/transaction db
