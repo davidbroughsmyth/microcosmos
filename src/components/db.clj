@@ -17,12 +17,18 @@
       ((get @adapter-fns (:adapter connection-params)) connection-params params))))
 
 (defn- quote-regex [s]
-  (-> s str clojure.string/re-quote-replacement (str/replace #"\." "\\\\.")))
+  (-> s
+      str
+      clojure.string/re-quote-replacement
+      (str/replace #"\." "\\\\.")
+      (str/replace #"\-" "\\\\-")))
 
 (defn normalize [sql params]
   (let [re (->> params
                 keys
                 (map quote-regex)
+                sort
+                reverse
                 (str/join "|")
                 re-pattern)
         matches (re-seq re sql)]
@@ -43,6 +49,19 @@
                    "(" (str/join "," fields) ")"
                    " VALUES(" (str/join "," keys) ")")
               attributes)))
+
+(defn update! [db table attributes where]
+  (let [wheres (->> where
+                    (map (fn [[k v]] [(-> k name (str "-where-clause-") keyword) v]))
+                    (into {}))
+        set-clause (->> attributes
+                        (map (fn [[attr value]] (str (name attr) " = " attr)))
+                        (str/join ","))
+        where-clause (->> where
+                          (map (fn [[attr value]] (str (name attr) " = " attr "-where-clause-")))
+                          (str/join " AND "))]
+    (execute! db (str "UPDATE " table " SET " set-clause " WHERE " where-clause)
+              (merge attributes wheres))))
 
 (defn query
   ([db sql-command] (query-database db [sql-command]))
@@ -71,11 +90,6 @@ Usage example:
   (let [conn-factory (connect-to :adapter :sqlite3)
         db (conn-factory {:mocked true :setup-db-fn prepare-fn})]
     (doseq [[table rows] tables-and-rows
-            row rows
-            :let [fields (map name (keys row))]]
-      (execute! db
-                (str "INSERT INTO " (name table)
-                     "(" (str/join "," fields) ")"
-                     " VALUES(" (str/join "," (keys row)) ")")
-                row))
+            row rows]
+      (insert! db (name table) row))
     db))
