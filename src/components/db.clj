@@ -48,7 +48,17 @@
   (execute! db "ROLLBACK")
   (execute! db "BEGIN"))
 
-(defn let-rows* [prepare-fn tables-and-rows body-fn]
+(defn fake-rows
+  "Generates an in-memory database, prepared by `prepare-fn`, and with some rows
+already populated. The database will be created, populated by `tables-and-rows`, and
+then returned as a connection ready to make modifications.
+
+Usage example:
+
+(let [db (fake-rows #(db/execute! \"CREATE TABLE example (name VARCHAR(255))\"))
+                    {:example [{:name \"foo\"} {:name \"bar\"}]}]
+  (db/query \"SELECT * FROM example\"))"
+  [prepare-fn tables-and-rows]
   (let [conn-factory (connect-to :adapter :sqlite3)
         db (conn-factory {:mocked true :setup-db-fn prepare-fn})]
     (doseq [[table rows] tables-and-rows
@@ -59,15 +69,4 @@
                      "(" (str/join "," fields) ")"
                      " VALUES(" (str/join "," (keys row)) ")")
                 row))
-    (body-fn db)))
-
-(defmacro let-rows
-  ""
-  [prepare-fn tables-and-rows var-name & body]
-  ; (let [body-fn (->> body
-  ;                    (cons [var-name])
-  ;                    (cons `fn*))]
-  `(let-rows*
-     ~prepare-fn
-     ~tables-and-rows
-     (fn* [~var-name] ~@body)))
+    db))
