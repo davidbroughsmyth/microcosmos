@@ -12,7 +12,10 @@
     (jdbc/execute! conn sql-command))
 
   (query-database [s sql-command]
-    (jdbc/query conn sql-command)))
+    (jdbc/query conn sql-command))
+
+  (get-jdbc-connection [db] conn)
+  (using-jdbc-connection [db conn] (assoc db :conn conn)))
 
 (defn- create-pool [file-name]
   (doto (ComboPooledDataSource.)
@@ -47,16 +50,3 @@
     (->SQLite {:datasource (pool file)})))
 
 (swap! db/adapter-fns assoc :sqlite adapter)
-; ;
-; (jdbc/execute! {:datasource (pool ":memory:")}
-;                ["CREATE TABLE foo (id VARCHAR(255) PRIMARY KEY)"])
-; ;
-; (jdbc/execute! {:datasource (pool ":memory:")}
-;                ["INSERT INTO foo VALUES(:name)" "bar"])
-; ;
-; (jdbc/query {:datasource (pool ":memory:")}
-;             ["SELECT * FROM foo WHERE id=:foo OR id < :id OR id > :id"
-;              "bar"])
-
-; (.getConnection (pool ":memory:"))
-; (NewProxyConnection. (.getConnection (pool ":memory:")))
