@@ -17,4 +17,12 @@
                  {:tests [{:id "foo" :name "bar"}
                           {:id "bar" :name "baz"}]}
                  db
-      (db/query db "SELECT * FROM tests WHERE id=:id" {:id "foo"}) => [{:id "foo" :name "bar"}])))
+      (db/query db "SELECT * FROM tests WHERE id=:id" {:id "foo"}) => [{:id "foo" :name "bar"}]))
+
+  (fact "allow transactions"
+    (db/let-rows mocked-db {:tests [{:id "foo" :name "bar"}]} db
+      (db/transaction db
+        (db/execute! db "UPDATE tests SET name=:name" {:name "test"})
+        (db/query db "SELECT * FROM tests") => [{:id "foo" :name "test"}]
+        (db/rollback! db))
+      (db/query db "SELECT * FROM tests") => [{:id "foo" :name "bar"}])))

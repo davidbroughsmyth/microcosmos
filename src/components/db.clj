@@ -1,11 +1,14 @@
 (ns components.db
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.java.jdbc :as jdbc]))
 
 (def adapter-fns (atom {}))
 
 (defprotocol RelationalDatabase
   (execute-command! [db sql-command])
-  (query-database [db sql-query]))
+  (query-database [db sql-query])
+  (get-jdbc-connection [db])
+  (using-jdbc-connection [db conn]))
 
 (defn connect-to [ & {:as connection-params}]
   (fn [params]
@@ -36,6 +39,15 @@
   ([db sql-command] (query-database db [sql-command]))
   ([db sql-command params] (query-database db (normalize sql-command params))))
 
+(defmacro transaction [db & body]
+  `(jdbc/with-db-transaction [db# (get-jdbc-connection ~db)]
+     (let [~db (using-jdbc-connection ~db db#)]
+       ~@body)))
+
+(defn rollback! [db]
+  (execute! db "ROLLBACK")
+  (execute! db "BEGIN"))
+
 (defn let-rows* [prepare-fn tables-and-rows body-fn]
   (let [conn-factory (connect-to :adapter :sqlite3)
         db (conn-factory {:mocked true :setup-db-fn prepare-fn})]
@@ -52,7 +64,10 @@
 (defmacro let-rows
   ""
   [prepare-fn tables-and-rows var-name & body]
-  (let [body-fn (->> body
-                     (cons [var-name])
-                     (cons `fn))]
-    `(let-rows* ~prepare-fn ~tables-and-rows ~body-fn)))
+  ; (let [body-fn (->> body
+  ;                    (cons [var-name])
+  ;                    (cons `fn*))]
+  `(let-rows*
+     ~prepare-fn
+     ~tables-and-rows
+     (fn* [~var-name] ~@body)))
