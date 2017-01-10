@@ -6,7 +6,9 @@
             [clojure.java.jdbc :as jdbc]
             [clojure.java.io :as io]))
 
-; (defn mocked-db [db])
+(defn mocked-db [db]
+  (db/execute! db "CREATE TABLE tests (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
+  (db/execute! db "INSERT INTO tests VALUES (:id, :name)" {:id "foo" :name "bar"}))
 ;
 ;
 ; (def teardowns (atom []))
@@ -30,12 +32,13 @@
       (let [db1 (sqlite/adapter {:file ":memory:"} {})
             db2 (sqlite/adapter {:file ":memory:"} {})]
         (db/execute! db1 "CREATE TABLE foo (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
-        ; (db/execute! db1 "CREATE TABLE foo (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
         (db/execute! db2 "CREATE TABLE foo (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
         (db/execute! db2 "INSERT INTO foo VALUES (:id, :name)" {:id "foo" :name "bar"}) => [1]
         (db/query db1 "SELECT * FROM foo") => [])))
 
-  ; (fact "creates a database in memory, preparing with some queries")
+  (fact "creates a database in memory, preparing with some commands"
+    (let [db (sqlite/adapter {:file ":memory:"} {:setup-db-fn mocked-db})]
+      (db/query db "SELECT * FROM tests") = [{:id "foo" :name "bar"}]>))
 
   (background
     (after :facts (do

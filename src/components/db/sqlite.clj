@@ -32,16 +32,18 @@
         (swap! all-pools assoc file pool)
         pool)))
 
-(defn new-memory-db []
-  (let [pool (create-pool ":memory:")]
-    (.setMaxPoolSize pool 1)
-    (.setMinPoolSize pool 1)
-    (.setInitialPoolSize pool 1)
-    (->SQLite {:datasource pool})))
+(defn new-memory-db [setup-db-fn]
+  (let [pool (doto (create-pool ":memory:")
+                   (.setMaxPoolSize 1)
+                   (.setMinPoolSize 1)
+                   (.setInitialPoolSize 1))
+        db (->SQLite {:datasource pool})]
+    (when setup-db-fn (setup-db-fn db))
+    db))
 
-(defn adapter [{:keys [file]} {:keys [teardown]}]
+(defn adapter [{:keys [file]} {:keys [teardown setup-db-fn]}]
   (if (= ":memory:" file)
-    (new-memory-db)
+    (new-memory-db setup-db-fn)
     (->SQLite {:datasource (pool file)})))
 
 (swap! db/adapter-fns assoc :sqlite adapter)
