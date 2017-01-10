@@ -35,8 +35,4 @@
 
     (fact "listens to failure"
       (future/on-failure (fn [_] (reset! res :fail)) failure)
-      @res => :fail)
-
-    (fact "listens to anything"
-      (future/on-finish (fn [] (reset! res :all)) failure)
-      @res => :all)))
+      @res => :fail)))

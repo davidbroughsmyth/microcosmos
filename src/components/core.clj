@@ -33,14 +33,13 @@ this"))
       (str old-cid "." (cid-gen 5))
       (cid-gen 8))))
 
-(defn params-for-generators [{:keys [msg-data teardowns]}]
+(defn params-for-generators [msg-data]
   (let [cid (get-in msg-data [:meta :cid])
         new-cid (generate-cid cid)]
-    {:cid new-cid :teardown #(swap! teardowns conj %)}))
+    {:cid new-cid}))
 
 (defn- handler-for-component [components-generators io-component callback data]
-  (let [teardowns (atom [])
-        params (params-for-generators {:msg-data data :teardowns teardowns})
+  (let [params (params-for-generators data)
         components (->> components-generators
                         (map (fn [[k generator]] [k (generator params)]))
                         (into {}))
@@ -52,8 +51,7 @@ this"))
     (log/info logger "Processing message" :msg data)
     (->> (callback (future/execute data) components)
          (future/on-success ack-msg)
-         (future/on-failure reject-msg)
-         (future/on-finish #(doseq [t-fn @teardowns] (t-fn))))))
+         (future/on-failure reject-msg))))
 
 (defn subscribe-with
   "Defines a subscribe function for an IO component (like a Rabbit Queue, HTTP handler,
