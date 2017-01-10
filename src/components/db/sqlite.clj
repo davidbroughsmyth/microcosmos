@@ -44,7 +44,7 @@
     (when setup-db-fn (setup-db-fn db))
     db))
 
-(defn adapter [{:keys [file]} {:keys [teardown setup-db-fn]}]
+(defn adapter [{:keys [file]} {:keys [setup-db-fn]}]
   (if (= ":memory:" file)
     (new-memory-db setup-db-fn)
     (->SQLite {:datasource (pool file)})))
