@@ -22,12 +22,23 @@
       (db/insert! db "tests" {:id "nothing" :name "at all"})
       (db/query db "SELECT * FROM tests") => [{:id "nothing" :name "at all"}]))
 
-  (fact "inserts data in DB"
+  (fact "updates data in DB"
     (let [db (db/fake-rows mocked-db {:tests [{:id "foo" :name "bar"}
                                               {:id "bar" :name "baz"}]})]
       (db/update! db "tests" {:name "woo"} {:name "bar"})
       (db/query db "SELECT * FROM tests ORDER BY id") => [{:id "bar" :name "baz"}
                                                           {:id "foo" :name "woo"}]))
+
+  (fact "inserts or updates, depending on case"
+    (let [db (db/fake-rows mocked-db {:tests [{:id "foo" :name "bar"}]})]
+      (db/upsert! db "tests" :name {:id "fooa" :name "bar"})
+      (db/query db "SELECT * FROM tests ORDER BY id") => [{:id "fooa" :name "bar"}]
+      (db/upsert! db "tests" :id {:id "foo" :name "bar"})
+      (db/query db "SELECT * FROM tests ORDER BY id") => [{:id "foo" :name "bar"}
+                                                          {:id "fooa" :name "bar"}]
+      (db/upsert! db "tests" :name {:id "foo" :name "bar"})
+      => (throws clojure.lang.ExceptionInfo)))
+
 
   (fact "allow transactions"
     (let [db (db/fake-rows mocked-db {:tests [{:id "foo" :name "bar"}]})]

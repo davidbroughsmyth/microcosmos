@@ -76,6 +76,17 @@
   (execute! db "ROLLBACK")
   (execute! db "BEGIN"))
 
+(defn upsert! [db table key attributes]
+  (transaction db
+    (let [sql (cond-> (str "SELECT 1 FROM " table " WHERE " (name key) " = " key)
+                      (not (-> db :conn :datasource .getJdbcUrl
+                               (str/starts-with? "jdbc:sqlite"))) (str " FOR UPDATE"))
+          result (query db sql attributes)]
+      (case (count result)
+        0 (insert! db table attributes)
+        1 (update! db table attributes (select-keys attributes [key]))
+        (throw (ex-info "Multiple results - expected one or zero" {:count (count result)}))))))
+
 (defn fake-rows
   "Generates an in-memory database, prepared by `prepare-fn`, and with some rows
 already populated. The database will be created, populated by `tables-and-rows`, and
