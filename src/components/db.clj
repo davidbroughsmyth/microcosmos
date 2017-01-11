@@ -84,7 +84,7 @@
           result (query db sql attributes)]
       (case (count result)
         0 (insert! db table attributes)
-        1 (update! db table attributes (select-keys attributes [key]))
+        1 (update! db table (dissoc attributes :id) (select-keys attributes [key]))
         (throw (ex-info "Multiple results - expected one or zero" {:count (count result)}))))))
 
 (defn fake-rows
