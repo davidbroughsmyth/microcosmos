@@ -85,8 +85,17 @@ or failure"
         (listen component
                 (partial handler-for-component components-generators component callback))))))
 
-(defmacro mocked [ & args]
-  `(let [function# ~params-for-generators]
-     (with-redefs [params-for-generators #(assoc (function# %) :mocked true)
-                   future/pool (fut-pool/immediate-future-pool)]
-       ~(cons `do args))))
+(defmacro mocked
+  "Generates a mocked environment, for tests. In this mode, `db` is set to sqlite,
+memory only, RabbitMQ is disabled and code is used to coordinate between messages, etc.
+
+If the first argument is a Map, it'll be used to pass parameters to mocked environment.
+Parameters are dependend of each component implementation."
+  [ & args]
+  (let [possible-params (first args)
+        params (cond-> {:mocked true}
+                       (map? possible-params) (merge possible-params))]
+    `(let [function# ~params-for-generators]
+       (with-redefs [params-for-generators #(merge (function# %) ~params)
+                     future/pool (fut-pool/immediate-future-pool)]
+         ~(cons `do args)))))

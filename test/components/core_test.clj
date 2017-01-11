@@ -65,8 +65,10 @@
 
 ; Mocking section
 (def queue (atom nil))
-(defn fake-queue [{:keys [mocked]}]
+(def initial-state (atom nil))
+(defn fake-queue [{:keys [mocked initial-state-val]}]
   (when mocked
+    (reset! initial-state initial-state-val)
     (let [atom (atom nil)]
       (reset! queue
               (reify components/IO
@@ -83,10 +85,13 @@
                  (future/map (fn [_] (log/error logger "Message")) future-val)))))
 
 (facts "When testing code"
-  (components/mocked
-    (a-function)
+  (fact "uses mocked components only"
+    (components/mocked
+     (a-function)
+     (with-out-str
+       (components/send! @queue {:payload "Some msg"})) => #"ERROR: Message\n\n\{:cid"))
 
-    (fact "uses mocked components only"
-      (with-out-str
-        (components/send! @queue {:payload "Some msg"}))
-      => #"ERROR: Message\n\n\{:cid")))
+  (fact "allows to pass parameters to mocked env"
+    (components/mocked {:initial-state-val :some-initial-state}
+     (a-function)
+     @initial-state => :some-initial-state)))
