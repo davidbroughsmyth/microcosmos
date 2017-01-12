@@ -10,10 +10,12 @@
   (get-jdbc-connection [db])
   (using-jdbc-connection [db conn]))
 
+(def mocked-db nil)
+
 (defn connect-to [ & {:as connection-params}]
   (fn [params]
     (if (:mocked params)
-      ((:sqlite @adapter-fns) {:file ":memory:"} params)
+      (alter-var-root #'mocked-db (constantly ((:sqlite @adapter-fns) {:file ":memory:"} params)))
       ((get @adapter-fns (:adapter connection-params)) connection-params params))))
 
 (defn- quote-regex [s]
