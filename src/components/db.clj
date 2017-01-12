@@ -2,8 +2,6 @@
   (:require [clojure.string :as str]
             [clojure.java.jdbc :as jdbc]))
 
-(def adapter-fns (atom {}))
-
 (defprotocol RelationalDatabase
   (execute-command! [db sql-command])
   (query-database [db sql-query])
@@ -11,12 +9,20 @@
   (using-jdbc-connection [db conn]))
 
 (def mocked-db nil)
+(defonce adapter-fns (atom {}))
+
+(defn- connect-to-adapter [connection-params params]
+  (let [adapter (:adapter connection-params)
+        _ (require [(symbol (str "components.db." (name adapter)))])
+        conn-factory (get @adapter-fns adapter)]
+    (conn-factory connection-params params)))
 
 (defn connect-to [ & {:as connection-params}]
   (fn [params]
     (if (:mocked params)
-      (alter-var-root #'mocked-db (constantly ((:sqlite @adapter-fns) {:file ":memory:"} params)))
-      ((get @adapter-fns (:adapter connection-params)) connection-params params))))
+      (alter-var-root #'mocked-db (constantly (connect-to-adapter
+                                                {:adapter :sqlite :file ":memory:"} params)))
+      (connect-to-adapter connection-params params))))
 
 (defn- quote-regex [s]
   (-> s
