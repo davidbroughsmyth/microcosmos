@@ -19,9 +19,9 @@
   (fut-finagle/flatmap* (fut-finagle/collect objs) #(apply fun %)))
 
 (defn on-success [fun & objs]
-  (fut-finagle/on-success* (fut-finagle/collect objs) #(do
-                                                         (apply fun %)
-                                                         nil)))
+  (cond->> #(do (apply fun %) nil)
+           :always (fut-finagle/on-success* (fut-finagle/collect objs))
+           (= (count objs) 1) (map first)))
 
 (defn on-failure [fun & objs]
   (fut-finagle/on-failure* (fut-finagle/collect objs) #(do
