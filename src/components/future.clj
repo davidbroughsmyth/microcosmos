@@ -35,8 +35,10 @@
 (defmacro execute [ & args]
   `(fut-pool/run* pool ~(cons `fn (cons [] args))))
 
-(defn map-fork [future fun & funs]
-  (->> funs
-       (core/map #(map % future))
-       (cons (map fun future))
-       vec))
+(defn map-fork [fun & funs]
+  (let [future (last funs)
+        funs (butlast funs)]
+    (->> funs
+         (core/map (fn [fun] (flat-map #(execute (fun %)) future)))
+         (cons (flat-map #(execute (fun %)) future))
+         vec)))

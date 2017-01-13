@@ -2,19 +2,27 @@
   (:require [clojure.string :as str]
             [clojure.java.jdbc :as jdbc]))
 
-(def adapter-fns (atom {}))
-
 (defprotocol RelationalDatabase
   (execute-command! [db sql-command])
   (query-database [db sql-query])
   (get-jdbc-connection [db])
   (using-jdbc-connection [db conn]))
 
+(def mocked-db nil)
+(defonce adapter-fns (atom {}))
+
+(defn- connect-to-adapter [connection-params params]
+  (let [adapter (:adapter connection-params)
+        _ (require [(symbol (str "components.db." (name adapter)))])
+        conn-factory (get @adapter-fns adapter)]
+    (conn-factory connection-params params)))
+
 (defn connect-to [ & {:as connection-params}]
   (fn [params]
     (if (:mocked params)
-      ((:sqlite @adapter-fns) {:file ":memory:"} params)
-      ((get @adapter-fns (:adapter connection-params)) connection-params params))))
+      (alter-var-root #'mocked-db (constantly (connect-to-adapter
+                                                {:adapter :sqlite :file ":memory:"} params)))
+      (connect-to-adapter connection-params params))))
 
 (defn- quote-regex [s]
   (-> s
@@ -75,6 +83,17 @@
 (defn rollback! [db]
   (execute! db "ROLLBACK")
   (execute! db "BEGIN"))
+
+(defn upsert! [db table key attributes]
+  (transaction db
+    (let [sql (cond-> (str "SELECT 1 FROM " table " WHERE " (name key) " = " key)
+                      (not (-> db :conn :datasource .getJdbcUrl
+                               (str/starts-with? "jdbc:sqlite"))) (str " FOR UPDATE"))
+          result (query db sql attributes)]
+      (case (count result)
+        0 (insert! db table attributes)
+        1 (update! db table (dissoc attributes :id) (select-keys attributes [key]))
+        (throw (ex-info "Multiple results - expected one or zero" {:count (count result)}))))))
 
 (defn fake-rows
   "Generates an in-memory database, prepared by `prepare-fn`, and with some rows

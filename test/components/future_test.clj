@@ -22,7 +22,7 @@
 
   (fact "forks multiple operations, and joins then together"
     (let [fut (future/just 10)
-          results (future/map-fork fut #(+ % 10) #(+ % 20))]
+          results (future/map-fork #(+ % 10) #(+ % 20) fut)]
       (future/join results) => (future= [20 30]))))
 
 (facts "when listening to futures"
