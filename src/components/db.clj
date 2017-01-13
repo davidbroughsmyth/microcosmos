@@ -8,7 +8,7 @@
   (get-jdbc-connection [db])
   (using-jdbc-connection [db conn]))
 
-(def mocked-db nil)
+(def ^:dynamic mocked-db nil)
 (defonce adapter-fns (atom {}))
 
 (defn- connect-to-adapter [connection-params params]
@@ -17,12 +17,18 @@
         conn-factory (get @adapter-fns adapter)]
     (conn-factory connection-params params)))
 
+(defn- mock-connection [connection params]
+  (let [connect! (delay (connect-to-adapter {:adapter :sqlite :file ":memory:"} params))
+        conn (swap! connection #(or % @connect!))]
+    (alter-var-root #'mocked-db (constantly conn))
+    conn))
+
 (defn connect-to [ & {:as connection-params}]
-  (fn [params]
-    (if (:mocked params)
-      (alter-var-root #'mocked-db (constantly (connect-to-adapter
-                                                {:adapter :sqlite :file ":memory:"} params)))
-      (connect-to-adapter connection-params params))))
+  (let [connection (atom nil)]
+    (fn [params]
+      (if (:mocked params)
+        (mock-connection connection params)
+        (swap! connection #(or % (connect-to-adapter connection-params params)))))))
 
 (defn- quote-regex [s]
   (-> s
