@@ -4,6 +4,8 @@
             [clojure.core :as clj]
             [components.io :as io]
             [components.healthcheck :as health]
+            [components.core :as components]
+            [components.future :as future]
             [langohr.basic :as basic]
             [langohr.channel :as channel]
             [langohr.consumers :as consumers]
@@ -108,14 +110,15 @@
   (unhealthy? [_] (when (core/closed? channel)
                     {:channel "is closed"})))
 
-(def connections (atom {}))
+(defonce connections (atom {}))
 
 (def ^:private rabbit-config {:hosts (-> env :rabbit-config (json/parse-string true))
                               :queues (-> env :rabbit-queues (json/parse-string true))})
 
 (defn- connection-to-host [host]
   (let [connect! #(let [connection (core/connect (get-in rabbit-config [:hosts host] {}))
-                        channel (channel/open connection)]
+                        channel (doto (channel/open connection)
+                                      (basic/qos (* 5 future/num-cpus)))]
                     [connection channel])]
     (if-let [conn (get @connections host)]
       conn

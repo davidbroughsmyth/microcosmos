@@ -8,9 +8,9 @@
 (def just fut-finagle/value)
 (def join fut-finagle/collect)
 
-(def ^:private cpus (.availableProcessors (Runtime/getRuntime)))
+(def num-cpus (.availableProcessors (Runtime/getRuntime)))
 (defonce pool (fut-pool/future-pool
-                (Executors/newFixedThreadPool (* cpus 2))))
+                (Executors/newFixedThreadPool (* num-cpus 2))))
 
 (defn map [fun & objs]
   (fut-finagle/map* (fut-finagle/collect objs) #(apply fun %)))
