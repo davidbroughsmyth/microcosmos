@@ -81,6 +81,7 @@
     (map :payload @all-deadletters) => ["error"]
     (map :payload @all-msgs) => ["error" "msg" "error" "other-msg"])
 
+  (future-fact "sends message to deadletter if isn't in JSON format")
   (future-fact "don't process anything if old server died (but mark to retry later)")
 
   (against-background

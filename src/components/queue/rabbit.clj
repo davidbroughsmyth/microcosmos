@@ -10,7 +10,8 @@
             [langohr.exchange :as exchange]
             [langohr.queue :as queue]
             [environ.core :refer [env]])
-  (:import [com.rabbitmq.client LongString]))
+  (:import [com.rabbitmq.client LongString]
+           [com.fasterxml.jackson.core JsonParseException]))
 
 (generators/add-encoder LongString generators/encode-str)
 
@@ -45,17 +46,15 @@
   (basic/ack (:channel queue) (:delivery-tag meta)))
 
 (defn requeue-msg [queue payload meta]
+  (println "HEADERS" (type (:headers meta)) (:headers meta))
   (basic/publish (:channel queue)
                  ""
                  (:name queue)
                  payload
                  (update meta :headers (fn [hash-map]
-                                         (if (map? hash-map)
-                                           (assoc hash-map "retries"
-                                                  (-> meta retries-so-far inc))
-                                           (doto hash-map
-                                                 (.put "retries"
-                                                       (-> meta retries-so-far inc))))))))
+                                         (let [map (into {} hash-map)]
+                                           (assoc map "retries"
+                                                  (-> meta retries-so-far inc)))))))
 
 (defn reject-or-requeue [queue meta payload]
   (let [retries (retries-so-far meta)
@@ -71,7 +70,10 @@
         reject-msg #(basic/reject (:channel self) (:delivery-tag meta) false)]
     (if (:redelivery? meta)
       (reject-or-requeue self meta payload)
-      (callback {:payload (parse-payload payload) :meta (parse-meta meta)}))))
+      (let [payload (try (parse-payload payload) (catch JsonParseException _ :INVALID))]
+        (if (= payload :INVALID)
+          (reject-msg)
+          (callback {:payload payload :meta (parse-meta meta)}))))))
 
 (defn- raise-error []
   (throw (IllegalArgumentException.
