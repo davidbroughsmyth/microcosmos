@@ -8,7 +8,7 @@
   (get-jdbc-connection [db])
   (using-jdbc-connection [db conn]))
 
-(def mocked-db nil)
+(def ^:dynamic mocked-db nil)
 (defonce adapter-fns (atom {}))
 
 (defn- connect-to-adapter [connection-params params]
@@ -17,12 +17,18 @@
         conn-factory (get @adapter-fns adapter)]
     (conn-factory connection-params params)))
 
+(defn- mock-connection [connection params]
+  (let [connect! (delay (connect-to-adapter {:adapter :sqlite :file ":memory:"} params))
+        conn (swap! connection #(or % @connect!))]
+    (alter-var-root #'mocked-db (constantly conn))
+    conn))
+
 (defn connect-to [ & {:as connection-params}]
-  (fn [params]
-    (if (:mocked params)
-      (alter-var-root #'mocked-db (constantly (connect-to-adapter
-                                                {:adapter :sqlite :file ":memory:"} params)))
-      (connect-to-adapter connection-params params))))
+  (let [connection (atom nil)]
+    (fn [params]
+      (if (:mocked params)
+        (mock-connection connection params)
+        (swap! connection #(or % (connect-to-adapter connection-params params)))))))
 
 (defn- quote-regex [s]
   (-> s
@@ -84,12 +90,25 @@
   (execute! db "ROLLBACK")
   (execute! db "BEGIN"))
 
+; I REALLY hope that in the future we decide for some library that writes
+; these queries for us, but for now...
+(defn select-for-update [db  & {:keys [select from where order binds]
+                                :or {select "*"}}]
+  (let [is-sqlite (-> db :conn :datasource .getJdbcUrl (str/starts-with? "jdbc:sqlite"))
+        sql (cond-> (str "SELECT " select " FROM " from)
+                    where (str " WHERE " where)
+                    order (str " ORDER BY " order)
+                    (not is-sqlite) (str " FOR UPDATE"))]
+    (if binds
+      (query db sql binds)
+      (query db sql))))
+
 (defn upsert! [db table key attributes]
   (transaction db
-    (let [sql (cond-> (str "SELECT 1 FROM " table " WHERE " (name key) " = " key)
-                      (not (-> db :conn :datasource .getJdbcUrl
-                               (str/starts-with? "jdbc:sqlite"))) (str " FOR UPDATE"))
-          result (query db sql attributes)]
+    (let [result (select-for-update db :select "1"
+                                       :from table
+                                       :where (str (name key) " = " key)
+                                       :binds attributes)]
       (case (count result)
         0 (insert! db table attributes)
         1 (update! db table (dissoc attributes :id) (select-keys attributes [key]))

@@ -46,7 +46,6 @@
         (db/query db "SELECT * FROM t2 ORDER BY id") => [{:id "foo" :name "bar" :age 50}
                                                          {:id "fooa" :name "bar" :age 40}])))
 
-
   (fact "allow transactions"
     (let [db (db/fake-rows mocked-db {:tests [{:id "foo" :name "bar"}]})]
       (db/transaction db

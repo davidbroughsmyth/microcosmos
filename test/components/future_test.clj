@@ -35,8 +35,21 @@
 
     (fact "listens to failure"
       (future/on-failure (fn [_] (reset! res :fail)) failure)
+      @res => :fail
+
+      (future/on-failure (fn [_] (reset! res :fail)) success failure)
       @res => :fail)
 
     (fact "listens to anything"
       (future/on-finish (fn [] (reset! res :all)) failure)
-      @res => :all)))
+      @res => :all)
+
+    (fact "pass-through the old result code when listening"
+      (let [r (future/on-success (fn [map] (assoc map :id 10)) (future/execute {:id 1}))]
+        r => (future= {:id 1}))
+
+      (let [v1 (future/execute 10)
+            v2 (future/execute 20)
+            r (future/on-success #(reset! res (+ %1 %2)) v1 v2)]
+        @res => 30
+        r => (future= [10 20])))))

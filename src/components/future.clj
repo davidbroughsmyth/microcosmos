@@ -19,9 +19,10 @@
   (fut-finagle/flatmap* (fut-finagle/collect objs) #(apply fun %)))
 
 (defn on-success [fun & objs]
-  (fut-finagle/on-success* (fut-finagle/collect objs) #(do
-                                                         (apply fun %)
-                                                         nil)))
+  (case (count objs)
+    0 (throw (IllegalArgumentException. "Must have at least 1 future in list"))
+    1 (fut-finagle/on-success* (first objs) #(do (fun %) nil))
+    (fut-finagle/on-success* (fut-finagle/collect objs) #(do (apply fun %) nil))))
 
 (defn on-failure [fun & objs]
   (fut-finagle/on-failure* (fut-finagle/collect objs) #(do
