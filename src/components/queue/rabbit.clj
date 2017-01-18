@@ -46,7 +46,6 @@
   (basic/ack (:channel queue) (:delivery-tag meta)))
 
 (defn requeue-msg [queue payload meta]
-  (println "HEADERS" (type (:headers meta)) (:headers meta))
   (basic/publish (:channel queue)
                  ""
                  (:name queue)
