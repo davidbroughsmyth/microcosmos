@@ -65,8 +65,9 @@ additional data, such as `:cid` and `:mocked`.
 
 For example, to subscribe to a RabbitMQ's queue, one can use:
 
-(def subscribe (subscribe-with :result-q (queue \"result\")))
-(subscribe (queue \"data\") (fn [f-message components] .....))
+(let [subscribe (subscribe-with :result-q (queue \"result\"))
+                                :data-q (queue \"data\")]
+  (subscribe :data-q (fn [f-message components] .....)))
 
 The callback function (that will be passed to subscribe) will be called with two
 arguments: one is the message (it will be a `Future`, and when resolved will be a map
@@ -80,8 +81,9 @@ or failure"
   [ & {:as components-generators}]
   (let [components-generators (update components-generators
                                       :logger #(or % log/default-logger-gen))]
-    (fn [io-gen callback]
-      (let [component (io-gen (params-for-generators {}))]
+    (fn [comp-to-listen callback]
+      (let [generator (get components-generators comp-to-listen)
+            component (generator (params-for-generators {}))]
         (listen component
                 (partial handler-for-component components-generators component callback))))))
 
