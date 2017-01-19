@@ -67,18 +67,15 @@ or failure"
   [ & {:as components-generators}]
   (let [components-generators (-> components-generators
                                   (update :logger #(or % log/default-logger-gen))
-                                  (update :healthcheck #(or % health/health-checker-gen)))
-        subscriber (fn [comp-to-listen callback]
-                     (let [generator (get components-generators comp-to-listen)
-                           component (generator (params-for-generators {}))
-                           callback-fn (partial handler-for-component
-                                                components-generators
-                                                component
-                                                callback)]
-                       (listen component callback-fn)))]
-
-    (subscriber :healthcheck health/handle-healthcheck)
-    subscriber))
+                                 (update :healthcheck #(or % health/health-checker-gen)))]
+    (fn [comp-to-listen callback]
+        (let [generator (get components-generators comp-to-listen)
+              component (generator (params-for-generators {}))
+              callback-fn (partial handler-for-component
+                                   components-generators
+                                   component
+                                   callback)]
+          (listen component callback-fn)))))
 
 (defmacro mocked
   "Generates a mocked environment, for tests. In this mode, `db` is set to sqlite,

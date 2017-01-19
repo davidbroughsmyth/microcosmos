@@ -1,14 +1,17 @@
 (ns components.core-test
   (:require [midje.sweet :refer :all]
             [components.core :as components]
+            [components.io :as io]
             [components.future :as future]
             [components.logging :as log]
             [components.healthcheck :as health]
-            [finagle-clojure.http.client :as http-client]))
+            [finagle-clojure.http.client :as http-client]
+            [finagle-clojure.http.message :as msg]
+            [cheshire.core :as json]))
 
 (defn fake-component [other]
   (let [fn (atom nil)]
-    (reify components/IO
+    (reify io/IO
       (send! [_ msg] (@fn msg))
       (listen [_ f] (reset! fn f))
       (ack! [_ msg] (components/send! other {:ack msg}))
@@ -66,14 +69,18 @@
 
 (fact "generates a healthcheck HTTP entrypoint"
   (let [last-msg (atom nil)
-        other (fake-component nil)
-        component (fake-component other)
-        component-gen (fn [_] component)
         unhealthy-component (reify health/Healthcheck (unhealthy? [_] {:yes "I am"}))
-        subscribe (components/subscribe-with :unhealthy (constantly unhealthy-component)
-                                             :queue component-gen)]
-    (subscribe :queue (constantly nil))))
-    ; ()))
+        subscribe (components/subscribe-with :unhealthy (constantly unhealthy-component))
+        http (http-client/service ":8081")]
+    (subscribe :healthcheck health/handle-healthcheck)
+
+    (-> http
+        (finagle-clojure.service/apply (msg/request "/"))
+        finagle-clojure.futures/await
+        msg/content-string
+        (json/decode true)) => {:result false :details {:unhealthy {:yes "I am"}}})
+  (background
+    (after :facts (health/stop-health-checker!))))
 
 ; Mocking section
 (def queue (atom nil))
@@ -83,7 +90,7 @@
     (reset! initial-state initial-state-val)
     (let [atom (atom nil)]
       (reset! queue
-              (reify components/IO
+              (reify io/IO
                 (listen [component function] (add-watch atom :obs (fn [_ _ _ value]
                                                                     (function {:payload value}))))
                 (send! [component message] (reset! atom message))
