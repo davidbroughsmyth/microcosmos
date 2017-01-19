@@ -8,6 +8,7 @@
                  [com.novemberain/langohr "3.6.1"]
                  [cheshire "5.6.3"]
                  [finagle-clojure/core "0.7.0"]
+                 [finagle-clojure/http "0.7.0"]
                  [environ "1.1.0"]
                  [bouncycastle/bcprov-jdk16 "140"]
                  [com.mchange/c3p0 "0.9.2.1"]
