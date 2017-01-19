@@ -10,7 +10,8 @@
             [langohr.exchange :as exchange]
             [langohr.queue :as queue]
             [environ.core :refer [env]])
-  (:import [com.rabbitmq.client LongString]))
+  (:import [com.rabbitmq.client LongString]
+           [com.fasterxml.jackson.core JsonParseException]))
 
 (generators/add-encoder LongString generators/encode-str)
 
@@ -33,60 +34,74 @@
   (let [headers (->> meta
                      (map (fn [[k v]] [(clj/name k) v]))
                      (into {}))]
-    (apply dissoc headers rabbit-default-meta)))
+    (apply dissoc headers (map name rabbit-default-meta))))
 
 (defn- parse-payload [payload]
   (-> payload (String. "UTF-8") (json/decode true)))
 
-(defn- callback-payload [callback max-retries self _ meta payload]
-  (let [retries (or (get-in meta [:headers "retries"]) 0)
-        ack-msg #(basic/ack (:channel self) (:delivery-tag meta))
-        reject-msg #(basic/reject (:channel self) (:delivery-tag meta) false)
-        requeue-msg #(basic/publish (:channel self) "" (:name self)
-                                    payload
-                                    (update meta :headers (fn [hash-map]
-                                                            (doto hash-map
-                                                              (.put "retries" (inc retries))))))]
+(defn- retries-so-far [meta]
+  (get-in meta [:headers "retries"] 0))
+
+(defn ack-msg [queue meta]
+  (basic/ack (:channel queue) (:delivery-tag meta)))
+
+(defn requeue-msg [queue payload meta]
+  (basic/publish (:channel queue)
+                 ""
+                 (:name queue)
+                 payload
+                 (update meta :headers (fn [hash-map]
+                                         (let [map (into {} hash-map)]
+                                           (assoc map "retries"
+                                                  (-> meta retries-so-far inc)))))))
+
+(defn reject-or-requeue [queue meta payload]
+  (let [retries (retries-so-far meta)
+        send-to-deadletter #(basic/reject (:channel queue) (:delivery-tag meta) false)]
     (cond
-      (not (:redelivery? meta)) (callback {:payload (parse-payload payload)
-                                           :meta (parse-meta meta)})
-      (>= retries max-retries) (reject-msg)
-      :requeue-message (do (ack-msg) (requeue-msg)))))
+      (>= retries (:max-retries queue)) (send-to-deadletter)
+      :requeue-message (do
+                         (requeue-msg queue payload meta)
+                         (ack-msg queue meta)))))
+
+(defn- callback-payload [callback max-retries self _ meta payload]
+  (let [retries (retries-so-far meta)
+        reject-msg #(basic/reject (:channel self) (:delivery-tag meta) false)]
+    (if (:redelivery? meta)
+      (reject-or-requeue self meta payload)
+      (let [payload (try (parse-payload payload) (catch JsonParseException _ :INVALID))]
+        (if (= payload :INVALID)
+          (reject-msg)
+          (callback {:payload payload :meta (parse-meta meta)}))))))
 
 (defn- raise-error []
   (throw (IllegalArgumentException.
-           (str "Can't publish to queue without CID. Maybe you tried to send a message "
-                "using `queue` from components' namespace. Prefer to use the"
-                "components' attribute to create one."))))
+          (str "Can't publish to queue without CID. Maybe you tried to send a message "
+               "using `queue` from components' namespace. Prefer to use the "
+               "components' attribute to create one."))))
 
 (defrecord Queue [channel delayed name max-retries cid]
   components/IO
   (listen [self function]
-    (let [callback (partial callback-payload function max-retries self)]
-      (consumers/subscribe channel name callback)))
+          (let [callback (partial callback-payload function max-retries self)]
+            (consumers/subscribe channel name callback)))
 
   (send! [_ {:keys [payload meta] :or {meta {}}}]
-    (when-not cid (raise-error))
-    (let [payload (json/encode payload)
-          meta (assoc meta :headers (normalize-headers (assoc meta :cid cid)))]
-      (if delayed
-        (basic/publish channel name "" payload meta)
-        (basic/publish channel "" name payload meta))))
+         (when-not cid (raise-error))
+         (let [payload (json/encode payload)
+               meta (assoc meta :headers (normalize-headers (assoc meta :cid cid)))]
+           (if delayed
+             (basic/publish channel name "" payload meta)
+             (basic/publish channel "" name payload meta))))
 
   (ack! [_ {:keys [meta]}]
         (basic/ack channel (:delivery-tag meta)))
 
-  (reject! [self msg ex]
-    (let [meta (:meta msg)
-          retries (-> meta :retries (or 0))
-          tag (:delivery-tag meta)
-          old-cid (:cid meta)]
-      (if (>= retries max-retries)
-        (basic/reject channel tag false)
-        (do
-          (basic/ack channel tag)
-          (components/send! (->Queue channel delayed name max-retries old-cid)
-                            (assoc-in msg [:meta :retries] (inc retries))))))))
+  (reject! [self msg _]
+           (let [meta (:meta msg)
+                 meta (assoc meta :headers (normalize-headers meta))
+                 payload (-> msg :payload json/encode)]
+             (reject-or-requeue self meta payload))))
 
 (def connections (atom {}))
 

@@ -2,6 +2,7 @@
   (:require [components.core :as components]
             [components.future :as future]
             [components.queue.rabbit :as rabbit]
+            [components.logging :as log]
             [cheshire.core :as json]
             [langohr.core :as core]
             [midje.sweet :refer :all]))
@@ -19,8 +20,9 @@
                   (components/send! result-q value)))
               fut-value))
 
+(def logger (reify log/Log (log [_ _ type _] nil)))
 (def sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
-                                    :logger (fn [_] (components.logging/->DebugLogger "FOO"))))
+                                    :logger (fn [_] logger)))
 
 (defn in-future [f]
   (fn [future _]
@@ -79,6 +81,7 @@
     (map :payload @all-deadletters) => ["error"]
     (map :payload @all-msgs) => ["error" "msg" "error" "other-msg"])
 
+  (future-fact "sends message to deadletter if isn't in JSON format")
   (future-fact "don't process anything if old server died (but mark to retry later)")
 
   (against-background
