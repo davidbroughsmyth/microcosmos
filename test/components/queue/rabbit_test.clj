@@ -21,8 +21,6 @@
               fut-value))
 
 (def logger (reify log/Log (log [_ _ type _] nil)))
-(def sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
-                                    :logger (fn [_] logger)))
 
 (defn in-future [f]
   (fn [future _]
@@ -32,14 +30,19 @@
   (let [test-queue (rabbit/queue "test" :auto-delete true :max-retries 1)
         result-queue (rabbit/queue "test-result" :auto-delete true)
         channel (:channel (result-queue {}))
-        deadletter-queue (fn [_] (rabbit/->Queue channel false "test-deadletter" 1000 "FOO"))]
-    (sub test-queue send-msg)
-    (sub result-queue (in-future #(do
-                                    (swap! all-processed conj %)
-                                    (when (realized? @last-promise)
-                                      (reset! last-promise (promise)))
-                                    (deliver @last-promise %))))
-    (sub deadletter-queue (in-future #(swap! all-deadletters conj %)))
+        deadletter-queue (fn [_] (rabbit/->Queue channel false "test-deadletter" 1000 "FOO"))
+        sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
+                                       :logger (fn [_] logger)
+                                       :test-queue test-queue
+                                       :result-queue result-queue
+                                       :deadletter-queue deadletter-queue)]
+    (sub :test-queue send-msg)
+    (sub :result-queue (in-future #(do
+                                     (swap! all-processed conj %)
+                                     (when (realized? @last-promise)
+                                       (reset! last-promise (promise)))
+                                     (deliver @last-promise %))))
+    (sub :deadletter-queue (in-future #(swap! all-deadletters conj %)))
     (doseq [msg msgs]
       (components/send! (test-queue {:cid "FOO"}) msg))))
 
@@ -92,12 +95,16 @@
 (defn a-function [test-q]
   (let [extract-payload :payload
         upcases #(clojure.string/upper-case %)
-        publish #(components/send! %2 {:payload %1})]
-    (sub test-q (fn [msg {:keys [result-q]}]
-                  (->> msg
-                       (future/map extract-payload)
-                       (future/map upcases)
-                       (future/map #(publish % result-q)))))))
+        publish #(components/send! %2 {:payload %1})
+        sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
+                                       :logger (fn [_] logger)
+                                       :test-q test-q)]
+
+    (sub :test-q (fn [msg {:keys [result-q]}]
+                   (->> msg
+                        (future/map extract-payload)
+                        (future/map upcases)
+                        (future/map #(publish % result-q)))))))
 
 (facts "when mocking RabbitMQ's queue"
   (fact "subscribes correctly to messages"

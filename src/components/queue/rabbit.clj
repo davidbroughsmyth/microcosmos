@@ -2,7 +2,7 @@
   (:require [cheshire.core :as json]
             [cheshire.generate :as generators]
             [clojure.core :as clj]
-            [components.core :as components]
+            [components.io :as io]
             [langohr.basic :as basic]
             [langohr.channel :as channel]
             [langohr.consumers :as consumers]
@@ -81,7 +81,7 @@
                "components' attribute to create one."))))
 
 (defrecord Queue [channel delayed name max-retries cid]
-  components/IO
+  io/IO
   (listen [self function]
           (let [callback (partial callback-payload function max-retries self)]
             (consumers/subscribe channel name callback)))
@@ -160,7 +160,7 @@
 (def queues (atom {}))
 
 (defrecord FakeQueue [messages cid delayed]
-  components/IO
+  io/IO
 
   (listen [self function]
     (add-watch messages :watch (fn [_ _ _ actual]
