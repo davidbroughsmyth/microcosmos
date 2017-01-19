@@ -64,24 +64,3 @@ reasons why that component is marked as unhealthy"))
       (ack! [_ _])
       (reject! [_ _ _]))
     @default-health-checker))
-
-; (defn server-gen [params]
-;   (let [server (http-server/serve ":8081" hello-world)]))
-;
-; (def hello-world
-;   (service/mk [req]
-;     (def r req)
-;     (future/just
-;       (-> (msg/response 200)
-;           (msg/set-content-string "Hello, World")))))
-;
-; ; (.getUri r)
-;
-; (def server (http-server/serve ":3000" hello-world))
-;
-; (builder-server/close! server)
-; ;
-; ; (-> (http-client/service ":3000")
-; ;     (finagle-clojure.service/apply (msg/request "/"))
-; ;     finagle-clojure.futures/await
-; ;     msg/content-string)
