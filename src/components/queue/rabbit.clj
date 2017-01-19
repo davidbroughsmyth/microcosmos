@@ -3,6 +3,7 @@
             [cheshire.generate :as generators]
             [clojure.core :as clj]
             [components.io :as io]
+            [components.healthcheck :as health]
             [langohr.basic :as basic]
             [langohr.channel :as channel]
             [langohr.consumers :as consumers]
@@ -101,7 +102,11 @@
            (let [meta (:meta msg)
                  meta (assoc meta :headers (normalize-headers meta))
                  payload (-> msg :payload json/encode)]
-             (reject-or-requeue self meta payload))))
+             (reject-or-requeue self meta payload)))
+
+  health/Healthcheck
+  (unhealthy? [_] (when (core/closed? channel)
+                    {:channel "is closed"})))
 
 (def connections (atom {}))
 

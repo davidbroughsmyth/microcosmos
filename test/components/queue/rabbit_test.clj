@@ -1,5 +1,6 @@
 (ns components.queue.rabbit-test
   (:require [components.core :as components]
+            [components.healthcheck :as health]
             [components.future :as future]
             [components.queue.rabbit :as rabbit]
             [components.logging :as log]
@@ -57,6 +58,21 @@
   (reset! all-processed [])
   (reset! all-deadletters []))
 
+(facts "Handling healthchecks"
+  (let [q-generator (rabbit/queue "test" :auto-delete true)]
+    (fact "health-checks if connections and channels are defined"
+      (health/check {:q (q-generator {})}) => {:result true :details {:q nil}})
+
+    (fact "informs that channel is offline"
+      (let [queue (q-generator {})]
+        (update-in @rabbit/connections ["localhost" 1] core/close)
+        (health/check {:q queue})) => {:result false
+                                       :details {:q {:channel "is closed"}}}
+      (against-background
+       (after :facts (do
+                       (update-in @rabbit/connections ["localhost" 0] core/close)
+                       (reset! rabbit/connections {})))))))
+
 (facts "Handling messages on RabbitMQ's queue"
   (fact "handles message if successful"
     (:payload (send-and-wait {:payload {:some "msg"}})) => {:some "msg"})
@@ -69,11 +85,11 @@
     (get-in (send-and-wait {:payload "msg"}) [:meta :cid]) => "FOO.BAR")
 
   (against-background
-    (components/generate-cid nil) => "FOO"
-    (components/generate-cid "FOO") => "FOO.BAR"
-    (components/generate-cid "FOO.BAR") => ..irrelevant..
-    (before :facts (prepare-tests))
-    (after :facts (rabbit/disconnect!))))
+   (components/generate-cid nil) => "FOO"
+   (components/generate-cid "FOO") => "FOO.BAR"
+   (components/generate-cid "FOO.BAR") => ..irrelevant..
+   (before :facts (prepare-tests))
+   (after :facts (rabbit/disconnect!))))
 
 ; OH MY GOSH, how difficult is to test asynchronous code!
 (fact "when message results in a failure process multiple times (till max-retries)"
