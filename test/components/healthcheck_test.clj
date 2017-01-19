@@ -12,6 +12,7 @@
 
 (facts "about healthcheck"
   (fact "marks full stack as unhealthy if one of components' healthcheck fails"
+    (health/check {:alive healthy-component}) => {:result true :details {:alive nil}}
     (health/check {:alive healthy-component :dead unhealthy-component :other "foo"})
     => {:result false :details {:dead {:channel "isn't connected"}
                                 :alive nil}}))
