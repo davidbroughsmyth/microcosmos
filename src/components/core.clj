@@ -67,7 +67,7 @@ or failure"
   [ & {:as components-generators}]
   (let [components-generators (-> components-generators
                                   (update :logger #(or % log/default-logger-gen))
-                                 (update :healthcheck #(or % health/health-checker-gen)))]
+                                  (update :healthcheck #(or % health/health-checker-gen)))]
     (fn [comp-to-listen callback]
         (let [generator (get components-generators comp-to-listen)
               component (generator (params-for-generators {}))
