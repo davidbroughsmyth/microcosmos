@@ -1,6 +1,7 @@
 (ns components.db.sqlite-test
   (:require [midje.sweet :refer :all]
             [components.core :as components]
+            [components.healthcheck :as health]
             [components.db :as db]
             [components.db.sqlite :as sqlite]
             [clojure.java.jdbc :as jdbc]
@@ -37,3 +38,21 @@
     (after :facts (do
                     (io/delete-file "__test__.db" true)
                     (reset! sqlite/all-pools {})))))
+
+(facts "about healthcheck"
+  (let [db (sqlite/adapter {:file ":memory:"} {})]
+    (fact "healthchecks when DB is connected"
+      (health/check {:db db}) => {:result true :details {:db nil}})
+
+    (fact "fails with connection error when DB is disconnected"
+      (.close (:datasource (:conn db)))
+      (health/check {:db db}) => {:result false
+                                  :details {:db {:connection "failed simple select"}}})
+
+    (fact "fails with exception message when something REALLY STRANGE occurred"
+      (health/check {:db db}) => {:result false
+                                  :details {:db {:connection "unknown error"
+                                                 :exception-type "clojure.lang.ExceptionInfo"
+                                                 :exception-msg "strange error"}}}
+      (provided
+       (db/query irrelevant irrelevant) =throws=> (ex-info "strange error" {})))))
