@@ -26,7 +26,10 @@ reasons why that component is marked as unhealthy"))
 ; Finagle's component to at least serve healthchecks in a specific port
 (defn handle-healthcheck [fut-request components]
   (let [healthcheck (:healthcheck components)
-        send! (constantly (io/send! healthcheck {:payload (check components)}))]
+        result (check components)
+        msg (cond-> {:payload result}
+                    (not (:result result)) (assoc :meta {:status-code 503}))
+        send! (constantly (io/send! healthcheck msg))]
     (future/map send! fut-request)))
 
 (def http-server (atom nil))
@@ -47,9 +50,9 @@ reasons why that component is marked as unhealthy"))
                                                          (println "foo")
                                                          @@p))]
                  (reset! http-server server)))
-       (send! [_ {:keys [payload]}]
+       (send! [_ {:keys [payload meta]}]
               (deliver @p
-                       (future/just (-> (msg/response 200)
+                       (future/just (-> (msg/response (or (:status-code meta) 200))
                                         (msg/set-content-string (json/encode payload))))))
        (ack! [_ _])
        (reject! [_ _ _]

@@ -71,14 +71,14 @@
   (let [last-msg (atom nil)
         unhealthy-component (reify health/Healthcheck (unhealthy? [_] {:yes "I am"}))
         subscribe (components/subscribe-with :unhealthy (constantly unhealthy-component))
-        http (http-client/service ":8081")]
-    (subscribe :healthcheck health/handle-healthcheck)
-
-    (-> http
-        (finagle-clojure.service/apply (msg/request "/"))
-        finagle-clojure.futures/await
-        msg/content-string
-        (json/decode true)) => {:result false :details {:unhealthy {:yes "I am"}}})
+        http (http-client/service ":8081")
+        _ (subscribe :healthcheck health/handle-healthcheck)
+        res (-> http
+                (finagle-clojure.service/apply (msg/request "/"))
+                finagle-clojure.futures/await)]
+    (-> res msg/content-string (json/decode true)) => {:result false
+                                                       :details {:unhealthy {:yes "I am"}}}
+    (msg/status-code res) => 503)
   (background
     (after :facts (health/stop-health-checker!))))
 
