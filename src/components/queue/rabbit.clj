@@ -108,9 +108,6 @@
 (def ^:private rabbit-config {:hosts (-> env :rabbit-config (json/parse-string true))
                               :queues (-> env :rabbit-queues (json/parse-string true))})
 
-(let [{:keys [foo bar]} {:foo "10" "bar" 20}]
-  [foo bar])
-
 (defn- connection-to-host [host]
   (let [connect! #(let [connection (core/connect (get-in rabbit-config [:hosts host] {}))
                         channel (channel/open connection)]
