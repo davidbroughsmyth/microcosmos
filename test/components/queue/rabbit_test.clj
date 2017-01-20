@@ -65,12 +65,12 @@
 
     (fact "informs that channel is offline"
       (let [queue (q-generator {})]
-        (update-in @rabbit/connections ["localhost" 1] core/close)
+        (update-in @rabbit/connections [:localhost 1] core/close)
         (health/check {:q queue})) => {:result false
                                        :details {:q {:channel "is closed"}}}
       (against-background
        (after :facts (do
-                       (update-in @rabbit/connections ["localhost" 0] core/close)
+                       (update-in @rabbit/connections [:localhost 0] core/close)
                        (reset! rabbit/connections {})))))))
 
 (facts "Handling messages on RabbitMQ's queue"

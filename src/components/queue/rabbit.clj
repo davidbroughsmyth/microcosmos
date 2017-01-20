@@ -110,8 +110,11 @@
 
 (def connections (atom {}))
 
-(def ^:private rabbit-config {:queues (-> env :rabbit-config json/parse-string)
-                              :hosts (-> env :rabbit-queues json/parse-string)})
+(def ^:private rabbit-config {:hosts (-> env :rabbit-config (json/parse-string true))
+                              :queues (-> env :rabbit-queues (json/parse-string true))})
+
+(let [{:keys [foo bar]} {:foo "10" "bar" 20}]
+  [foo bar])
 
 (defn- connection-to-host [host]
   (let [connect! #(let [connection (core/connect (get-in rabbit-config [:hosts host] {}))
@@ -122,10 +125,10 @@
       (get (swap! connections assoc host (connect!)) host))))
 
 (defn- connection-to-queue [queue-name]
-  (let [queue-host (get-in rabbit-config [:queues queue-name])]
+  (let [queue-host (get-in rabbit-config [:queues (keyword queue-name)])]
     (if queue-host
-      (connection-to-host queue-host)
-      (connection-to-host "localhost"))))
+      (connection-to-host (keyword queue-host))
+      (connection-to-host :localhost))))
 
 (defn disconnect! []
   (doseq [[_ [connection channel]] @connections]
