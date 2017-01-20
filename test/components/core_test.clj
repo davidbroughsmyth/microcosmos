@@ -114,4 +114,12 @@
   (fact "allows to pass parameters to mocked env"
     (components/mocked {:initial-state-val :some-initial-state}
      (a-function)
-     @initial-state => :some-initial-state)))
+     @initial-state => :some-initial-state))
+
+  (fact "allows to define the mocked obj"
+    (components/mocked {:mocks {:fake-queue (fn [_]
+                                              (reset! initial-state :mocked!)
+                                              (reify io/IO (listen [_ _])))}}
+
+      (a-function)
+      @initial-state => :mocked!)))

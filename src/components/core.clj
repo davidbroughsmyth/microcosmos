@@ -24,9 +24,12 @@
         new-cid (generate-cid cid)]
     {:cid new-cid}))
 
+(def ^:private get-generators identity)
+
 (defn- handler-for-component [components-generators io-component callback data]
   (let [params (params-for-generators data)
         components (->> components-generators
+                        get-generators
                         (map (fn [[k generator]] [k (generator params)]))
                         (into {}))
         logger (:logger components)
@@ -66,6 +69,7 @@ logged (automatically) and it'll be automatically ACKed or REJECTed in case of s
 or failure"
   [ & {:as components-generators}]
   (let [components-generators (-> components-generators
+                                  get-generators
                                   (update :logger #(or % log/default-logger-gen))
                                   (update :healthcheck #(or % health/health-checker-gen)))]
     (fn [comp-to-listen callback]
@@ -82,12 +86,15 @@ or failure"
 memory only, RabbitMQ is disabled and code is used to coordinate between messages, etc.
 
 If the first argument is a Map, it'll be used to pass parameters to mocked environment.
-Parameters are dependend of each component implementation."
+One possible parameter is `:mocks` - a map where keys are defined components, and values
+are the mocked components. Other parameters are dependend of each component implementation."
   [ & args]
   (let [possible-params (first args)
         params (cond-> {:mocked true}
-                       (map? possible-params) (merge possible-params))]
+                       (map? possible-params) (merge possible-params))
+        mocked-comps (->> (get params :mocks {}))]
     `(let [function# ~params-for-generators]
        (with-redefs [params-for-generators #(merge (function# %) ~params)
+                     get-generators #(merge % ~mocked-comps)
                      future/pool (fut-pool/immediate-future-pool)]
          ~(cons `do args)))))
