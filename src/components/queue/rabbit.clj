@@ -2,7 +2,8 @@
   (:require [cheshire.core :as json]
             [cheshire.generate :as generators]
             [clojure.core :as clj]
-            [components.core :as components]
+            [components.io :as io]
+            [components.healthcheck :as health]
             [langohr.basic :as basic]
             [langohr.channel :as channel]
             [langohr.consumers :as consumers]
@@ -81,7 +82,7 @@
                "components' attribute to create one."))))
 
 (defrecord Queue [channel delayed name max-retries cid]
-  components/IO
+  io/IO
   (listen [self function]
           (let [callback (partial callback-payload function max-retries self)]
             (consumers/subscribe channel name callback)))
@@ -101,7 +102,11 @@
            (let [meta (:meta msg)
                  meta (assoc meta :headers (normalize-headers meta))
                  payload (-> msg :payload json/encode)]
-             (reject-or-requeue self meta payload))))
+             (reject-or-requeue self meta payload)))
+
+  health/Healthcheck
+  (unhealthy? [_] (when (core/closed? channel)
+                    {:channel "is closed"})))
 
 (def connections (atom {}))
 
@@ -160,7 +165,7 @@
 (def queues (atom {}))
 
 (defrecord FakeQueue [messages cid delayed]
-  components/IO
+  io/IO
 
   (listen [self function]
     (add-watch messages :watch (fn [_ _ _ actual]

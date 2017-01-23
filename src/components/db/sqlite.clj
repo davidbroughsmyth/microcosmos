@@ -1,6 +1,7 @@
 (ns components.db.sqlite
   (:require [clojure.java.jdbc :as jdbc]
-            [components.db :as db])
+            [components.db :as db]
+            [components.healthcheck :as health])
   (:import [com.mchange.v2.c3p0 ComboPooledDataSource]
            [javax.sql DataSource PooledConnection]
            [java.sql DriverManager]))
@@ -14,7 +15,19 @@
     (jdbc/query conn sql-command))
 
   (get-jdbc-connection [db] conn)
-  (using-jdbc-connection [db conn] (assoc db :conn conn)))
+  (using-jdbc-connection [db conn] (assoc db :conn conn))
+
+  health/Healthcheck
+  (unhealthy? [self]
+    (let [[result] (try (db/query self "SELECT 'ok' as ok ")
+                     (catch java.sql.SQLException _ [])
+                     (catch Exception e [e]))]
+      (case result
+        {:ok "ok"} nil
+        nil {:connection "failed simple select"}
+        {:connection "unknown error"
+         :exception-type (.getName (.getClass result))
+         :exception-msg (.getMessage result)}))))
 
 (defn- create-pool [file-name]
   (doto (ComboPooledDataSource.)

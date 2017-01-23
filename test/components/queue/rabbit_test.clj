@@ -1,5 +1,6 @@
 (ns components.queue.rabbit-test
   (:require [components.core :as components]
+            [components.healthcheck :as health]
             [components.future :as future]
             [components.queue.rabbit :as rabbit]
             [components.logging :as log]
@@ -21,8 +22,6 @@
               fut-value))
 
 (def logger (reify log/Log (log [_ _ type _] nil)))
-(def sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
-                                    :logger (fn [_] logger)))
 
 (defn in-future [f]
   (fn [future _]
@@ -32,14 +31,19 @@
   (let [test-queue (rabbit/queue "test" :auto-delete true :max-retries 1)
         result-queue (rabbit/queue "test-result" :auto-delete true)
         channel (:channel (result-queue {}))
-        deadletter-queue (fn [_] (rabbit/->Queue channel false "test-deadletter" 1000 "FOO"))]
-    (sub test-queue send-msg)
-    (sub result-queue (in-future #(do
-                                    (swap! all-processed conj %)
-                                    (when (realized? @last-promise)
-                                      (reset! last-promise (promise)))
-                                    (deliver @last-promise %))))
-    (sub deadletter-queue (in-future #(swap! all-deadletters conj %)))
+        deadletter-queue (fn [_] (rabbit/->Queue channel false "test-deadletter" 1000 "FOO"))
+        sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
+                                       :logger (fn [_] logger)
+                                       :test-queue test-queue
+                                       :result-queue result-queue
+                                       :deadletter-queue deadletter-queue)]
+    (sub :test-queue send-msg)
+    (sub :result-queue (in-future #(do
+                                     (swap! all-processed conj %)
+                                     (when (realized? @last-promise)
+                                       (reset! last-promise (promise)))
+                                     (deliver @last-promise %))))
+    (sub :deadletter-queue (in-future #(swap! all-deadletters conj %)))
     (doseq [msg msgs]
       (components/send! (test-queue {:cid "FOO"}) msg))))
 
@@ -54,6 +58,21 @@
   (reset! all-processed [])
   (reset! all-deadletters []))
 
+(facts "Handling healthchecks"
+  (let [q-generator (rabbit/queue "test" :auto-delete true)]
+    (fact "health-checks if connections and channels are defined"
+      (health/check {:q (q-generator {})}) => {:result true :details {:q nil}})
+
+    (fact "informs that channel is offline"
+      (let [queue (q-generator {})]
+        (update-in @rabbit/connections [:localhost 1] core/close)
+        (health/check {:q queue})) => {:result false
+                                       :details {:q {:channel "is closed"}}}
+      (against-background
+       (after :facts (do
+                       (update-in @rabbit/connections [:localhost 0] core/close)
+                       (reset! rabbit/connections {})))))))
+
 (facts "Handling messages on RabbitMQ's queue"
   (fact "handles message if successful"
     (:payload (send-and-wait {:payload {:some "msg"}})) => {:some "msg"})
@@ -66,11 +85,11 @@
     (get-in (send-and-wait {:payload "msg"}) [:meta :cid]) => "FOO.BAR")
 
   (against-background
-    (components/generate-cid nil) => "FOO"
-    (components/generate-cid "FOO") => "FOO.BAR"
-    (components/generate-cid "FOO.BAR") => ..irrelevant..
-    (before :facts (prepare-tests))
-    (after :facts (rabbit/disconnect!))))
+   (components/generate-cid nil) => "FOO"
+   (components/generate-cid "FOO") => "FOO.BAR"
+   (components/generate-cid "FOO.BAR") => ..irrelevant..
+   (before :facts (prepare-tests))
+   (after :facts (rabbit/disconnect!))))
 
 ; OH MY GOSH, how difficult is to test asynchronous code!
 (fact "when message results in a failure process multiple times (till max-retries)"
@@ -92,12 +111,16 @@
 (defn a-function [test-q]
   (let [extract-payload :payload
         upcases #(clojure.string/upper-case %)
-        publish #(components/send! %2 {:payload %1})]
-    (sub test-q (fn [msg {:keys [result-q]}]
-                  (->> msg
-                       (future/map extract-payload)
-                       (future/map upcases)
-                       (future/map #(publish % result-q)))))))
+        publish #(components/send! %2 {:payload %1})
+        sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
+                                       :logger (fn [_] logger)
+                                       :test-q test-q)]
+
+    (sub :test-q (fn [msg {:keys [result-q]}]
+                   (->> msg
+                        (future/map extract-payload)
+                        (future/map upcases)
+                        (future/map #(publish % result-q)))))))
 
 (facts "when mocking RabbitMQ's queue"
   (fact "subscribes correctly to messages"
