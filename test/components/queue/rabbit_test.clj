@@ -136,7 +136,4 @@
       (components/send! (:test @rabbit/queues) {:payload "msg one"})
       (components/send! (:test @rabbit/queues) {:payload "msg two", :meta {:x-delay 400}})
       (-> @rabbit/queues :test-result :messages deref)
-      => (just [(contains {:payload "MSG ONE"})])))
-
-  (background
-    (after :facts (rabbit/clear-mocked-env!))))
+      => (just [(contains {:payload "MSG ONE"})]))))

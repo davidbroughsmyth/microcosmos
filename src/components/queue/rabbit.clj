@@ -198,6 +198,7 @@
   (reset! queues {}))
 
 (defn queue [name & {:as opts}]
+  (clear-mocked-env!)
   (fn [{:keys [cid mocked]}]
     (if mocked
       (mocked-rabbit-queue name cid (:delayed opts))
