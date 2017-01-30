@@ -47,7 +47,6 @@ reasons why that component is marked as unhealthy"))
                (let [server (http-server/serve ":8081" (service/mk [req]
                                                          (reset! p (promise))
                                                          (function {})
-                                                         (println "foo")
                                                          @@p))]
                  (reset! http-server server)))
        (send! [_ {:keys [payload meta]}]
