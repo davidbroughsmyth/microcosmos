@@ -82,7 +82,7 @@
                "using `queue` from components' namespace. Prefer to use the "
                "components' attribute to create one."))))
 
-(defrecord Queue [channel delayed name max-retries cid]
+(defrecord Queue [channel name max-retries cid]
   io/IO
   (listen [self function]
           (let [callback (partial callback-payload function max-retries self)]
@@ -92,9 +92,7 @@
          (when-not cid (raise-error))
          (let [payload (json/encode payload)
                meta (assoc meta :headers (normalize-headers (assoc meta :cid cid)))]
-           (if delayed
-             (basic/publish channel name "" payload meta)
-             (basic/publish channel "" name payload meta))))
+           (basic/publish channel name "" payload meta)))
 
   (ack! [_ {:keys [meta]}]
         (basic/ack channel (:delivery-tag meta)))
@@ -156,14 +154,15 @@
     (queue/declare channel dead-letter-q-name
                    {:durable true :auto-delete false :exclusive false})
 
-    (when (:delayed opts)
+    (if (:delayed opts)
       (exchange/declare channel name "x-delayed-message"
                         {:arguments {"x-delayed-type" "direct"}})
-      (queue/bind channel name name))
+      (exchange/declare channel name "fanout"))
+    (queue/bind channel name name)
 
     (exchange/fanout channel dead-letter-name {:durable true})
     (queue/bind channel dead-letter-q-name dead-letter-name)
-    (->Queue channel (:delayed opts) name (:max-retries opts) cid)))
+    (->Queue channel name (:max-retries opts) cid)))
 
 (def queues (atom {}))
 
