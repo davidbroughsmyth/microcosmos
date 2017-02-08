@@ -4,7 +4,6 @@
             [clojure.core :as clj]
             [components.io :as io]
             [components.healthcheck :as health]
-            [components.core :as components]
             [components.future :as future]
             [langohr.basic :as basic]
             [langohr.channel :as channel]
@@ -115,20 +114,20 @@
 (def ^:private rabbit-config {:hosts (-> env :rabbit-config (json/parse-string true))
                               :queues (-> env :rabbit-queues (json/parse-string true))})
 
-(defn- connection-to-host [host]
+(defn- connection-to-host [host prefetch-count]
   (let [connect! #(let [connection (core/connect (get-in rabbit-config [:hosts host] {}))
                         channel (doto (channel/open connection)
-                                      (basic/qos (* 5 future/num-cpus)))]
+                                      (basic/qos prefetch-count))]
                     [connection channel])]
     (if-let [conn (get @connections host)]
       conn
       (get (swap! connections assoc host (connect!)) host))))
 
-(defn- connection-to-queue [queue-name]
+(defn- connection-to-queue [queue-name prefetch-count]
   (let [queue-host (get-in rabbit-config [:queues (keyword queue-name)])]
     (if queue-host
-      (connection-to-host (keyword queue-host))
-      (connection-to-host :localhost))))
+      (connection-to-host (keyword queue-host) prefetch-count)
+      (connection-to-host :localhost prefetch-count))))
 
 (defn disconnect! []
   (doseq [[_ [connection channel]] @connections]
@@ -140,17 +139,18 @@
                            :auto-ack false
                            :auto-delete false
                            :max-retries 5
+                           :prefetch-count (* 5 future/num-cpus)
                            :durable true
                            :ttl (* 24 60 60 1000)})
 
 (defn- real-rabbit-queue [name opts cid]
-  (let [[connection channel] (connection-to-queue name)
-        opts (merge default-queue-params opts)
+  (let [opts (merge default-queue-params opts)
+        [connection channel] (connection-to-queue name (:prefetch-count opts))
         dead-letter-name (str name "-dlx")
         dead-letter-q-name (str name "-deadletter")]
 
     (queue/declare channel name (-> opts
-                                    (dissoc :max-retries :ttl)
+                                    (dissoc :max-retries :ttl :prefetch-count)
                                     (assoc :arguments {"x-dead-letter-exchange" dead-letter-name
                                                        "x-message-ttl" (:ttl opts)})))
     (queue/declare channel dead-letter-q-name
@@ -200,7 +200,19 @@
     (remove-watch (:messages queue) :watch))
   (reset! queues {}))
 
-(defn queue [name & {:as opts}]
+(defn queue
+  "Defines a new RabbitMQ's connection. Valid params ar `:exclusive`, `:auto-delete`,
+`:durable` and `:ttl`, all from Rabbit's documentation. We support additional
+parameters:
+
+- :max-retries is the number of times we'll try to process this message. Defaults
+  to `5`
+- :prefetch-count is the number of messages that rabbit will send us. By default,
+  rabbit will send ALL messages to us - this is undesirable in most cases. So,
+  we implement this as number-of-processors * 5. Changing it to `0` means
+  'send all messages'.
+"
+  [name & {:as opts}]
   (clear-mocked-env!)
   (fn [{:keys [cid mocked]}]
     (if mocked

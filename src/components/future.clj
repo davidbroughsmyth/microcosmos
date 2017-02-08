@@ -10,7 +10,7 @@
 
 (def num-cpus (.availableProcessors (Runtime/getRuntime)))
 (defonce pool (fut-pool/future-pool
-                (Executors/newFixedThreadPool (* num-cpus 2))))
+                (Executors/newFixedThreadPool (+ 2 (* num-cpus 2)))))
 
 (defn map [fun & objs]
   (fut-finagle/map* (fut-finagle/collect objs) #(apply fun %)))
