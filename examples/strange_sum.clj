@@ -8,6 +8,7 @@
   (log/->DebugLogger cid))
 
 (def sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
+                                    :sum (rabbit/queue "sum")
                                     :logger logger))
 
 (defn normalize-payload [message]
@@ -30,12 +31,11 @@
       (future/map sum)
       (future/map #(publish-result % result-q))))
 
-(sub (rabbit/queue "sum") process-sum)
+(sub :sum process-sum)
 
 (comment
    (doseq [_ (range 100)]
      (components/send! ((rabbit/queue "sum") {:cid  "FOOCID"})
                        {:payload {:n1 10001000 :n2 20}})))
 
-(sub (rabbit/queue "test-result" :auto-delete true)
-     (fn [f _] (future/map #(println "RES:" (:payload %)) f)))
+(sub :result-q (fn [f _] (future/map #(println "RES:" (:payload %)) f)))
