@@ -1,4 +1,6 @@
-(ns microscope.io)
+(ns microscope.io
+  (:require [cheshire.core :as json]
+            [clojure.string :as str]))
 
 (defprotocol IO
   (listen [component function]
@@ -23,3 +25,17 @@ this")
   (log-message [component log message]
                "Logs that we're consuming a message. This can be ignored by
 some components (like Healthcheck, for example)."))
+
+(defn- to-wire [key]
+  (if (keyword? key)
+    (-> key name (str/replace #"-" "_"))
+    (str key)))
+
+(defn serialize-msg [sexp]
+  (json/encode sexp {:key-fn to-wire}))
+
+(defn- to-internal [key]
+  (-> key str (str/replace #"_" "-") keyword))
+
+(defn deserialize-msg [json]
+  (json/decode json to-internal))
