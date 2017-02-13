@@ -1,5 +1,6 @@
 (ns microscope.rabbit.queue-test
   (:require [microscope.core :as components]
+            [microscope.io :as io]
             [microscope.healthcheck :as health]
             [microscope.future :as future]
             [microscope.rabbit.queue :as rabbit]
@@ -18,7 +19,7 @@
                 (swap! all-msgs conj value)
                 (case (:payload value)
                   "error" (throw (Exception. "Some Error"))
-                  (components/send! result-q value)))
+                  (io/send! result-q value)))
               fut-value))
 
 (def logger (reify log/Log (log [_ _ type _] nil)))
@@ -45,7 +46,7 @@
                                      (deliver @last-promise %))))
     (sub :deadletter-queue (in-future #(swap! all-deadletters conj %)))
     (doseq [msg msgs]
-      (components/send! (test-queue {:cid "FOO"}) msg))))
+      (io/send! (test-queue {:cid "FOO"}) msg))))
 
 (defn send-and-wait [ & msgs]
   (send-messages msgs)
@@ -111,7 +112,7 @@
 (defn a-function [test-q]
   (let [extract-payload :payload
         upcases #(clojure.string/upper-case %)
-        publish #(components/send! %2 {:payload %1})
+        publish #(io/send! %2 {:payload %1})
         sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
                                        :logger (fn [_] logger)
                                        :test-q test-q)]
@@ -126,14 +127,14 @@
   (fact "subscribes correctly to messages"
     (components/mocked
       (a-function (rabbit/queue "test"))
-      (components/send! (:test @rabbit/queues) {:payload "message"})
+      (io/send! (:test @rabbit/queues) {:payload "message"})
       (-> @rabbit/queues :test-result :messages deref)
       => (just [(contains {:payload "MESSAGE"})])))
 
   (fact "ignores delayed messages"
     (components/mocked
       (a-function (rabbit/queue "test" :delayed true))
-      (components/send! (:test @rabbit/queues) {:payload "msg one"})
-      (components/send! (:test @rabbit/queues) {:payload "msg two", :meta {:x-delay 400}})
+      (io/send! (:test @rabbit/queues) {:payload "msg one"})
+      (io/send! (:test @rabbit/queues) {:payload "msg two", :meta {:x-delay 400}})
       (-> @rabbit/queues :test-result :messages deref)
       => (just [(contains {:payload "MSG ONE"})]))))
