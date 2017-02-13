@@ -10,10 +10,7 @@
                  [finagle-clojure/core "0.7.0"]
                  [finagle-clojure/http "0.7.0"]
                  [environ "1.1.0"]
-                 [bouncycastle/bcprov-jdk16 "140"]
-                 [com.mchange/c3p0 "0.9.2.1"]
-                 [org.clojure/java.jdbc "0.6.1"]
-                 [org.xerial/sqlite-jdbc "3.15.1"]]
+                 [bouncycastle/bcprov-jdk16 "140"]]
 
   :profiles {:dev {:src-paths ["dev"]
                    :dependencies [[midje "1.8.3"]]
