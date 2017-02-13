@@ -33,7 +33,7 @@
                         (map (fn [[k generator]] [k (generator params)]))
                         (into {}))
         logger (:logger components)
-        ack-msg (constantly (ack! io-component data))
+        ack-msg (fn [_] (ack! io-component data))
         reject-msg (fn [ex]
                      (log/fatal logger "Uncaught Exception" :ex ex)
                      (reject! io-component data ex))]
