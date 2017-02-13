@@ -1,4 +1,4 @@
-# Components
+# Microscope
 
 General components to be reusable in every Clojure micro-service
 
