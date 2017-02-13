@@ -2,8 +2,6 @@
   (:require [microscope.healthcheck :as health]
             [clojure.java.jdbc :as jdbc])
   (:import [com.mchange.v2.c3p0 ComboPooledDataSource]))
-  ;          [javax.sql DataSource PooledConnection]
-  ;          [java.sql DriverManager]))
 
 (defrecord Database [datasource]
   health/Healthcheck
@@ -28,5 +26,18 @@
                    (.setMaxIdleTime (* 3 60 60)))]
     (->Database pool)))
 
+(defn sqlite-memory [setup-db-fn]
+  (let [db (db-for "org.sqlite.JDBC" "jdbc:sqlite::memory:" nil nil)
+        pool (doto (:datasource db)
+                   (.setMaxPoolSize 1)
+                   (.setMinPoolSize 1)
+                   (.setInitialPoolSize 1))]
+    (when setup-db-fn (setup-db-fn db))
+    db))
+
 (defmacro gen-constructor [code]
-  `(fn [params#]))
+  `(let [pool# (delay ~code)]
+     (fn [params#]
+       (if (:mocked params#)
+         (sqlite-memory (:setup-db-fn params#))
+         @pool#))))
