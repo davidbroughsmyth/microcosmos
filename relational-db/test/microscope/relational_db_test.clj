@@ -19,6 +19,27 @@
     (let [db (db/sqlite-memory mocked-db)]
       (jdbc/query db "SELECT * FROM tests") => [{:id "foo" :name "bar"}]))
 
+  (fact "allows definition of fake database with fake rows"
+    (let [db (db/fake-rows mocked-db {:tests [{:id "quoz" :name "bar"}
+                                              {:id "bar" :name "baz"}]})]
+      (jdbc/query db ["SELECT * FROM tests WHERE id=?" "quoz"])
+      => [{:id "quoz" :name "bar"}]))
+
+  (fact "allow transactions"
+    (let [db (db/fake-rows mocked-db {:tests [{:id "faa" :name "bar"}]})]
+      (jdbc/with-db-transaction [db db]
+        (jdbc/execute! db ["UPDATE tests SET name=:name" "test"])
+
+        (fact "inside transaction, name is 'test'"
+          (jdbc/query db "SELECT * FROM tests WHERE id='faa'")
+          => [{:id "faa" :name "test"}])
+
+        (fact "transaction is rolled back" (jdbc/db-set-rollback-only! db) => irrelevant))
+
+      (fact "outside transaction, name is 'bar'"
+        (jdbc/query db "SELECT * FROM tests WHERE id='faa'")
+        => [{:id "faa" :name "bar"}])))
+
   (facts "about memory database"
     (fact "uses a different DB everytime we need one"
       (let [db1 (db/sqlite-memory nil)
