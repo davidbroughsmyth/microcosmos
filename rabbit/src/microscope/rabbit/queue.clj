@@ -1,4 +1,4 @@
-(ns microscope.queue.rabbit
+(ns microscope.rabbit.queue
   (:require [cheshire.core :as json]
             [cheshire.generate :as generators]
             [clojure.core :as clj]

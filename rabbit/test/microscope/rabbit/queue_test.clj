@@ -1,8 +1,8 @@
-(ns microscope.queue.rabbit-test
+(ns microscope.rabbit.queue-test
   (:require [microscope.core :as components]
             [microscope.healthcheck :as health]
             [microscope.future :as future]
-            [microscope.queue.rabbit :as rabbit]
+            [microscope.rabbit.queue :as rabbit]
             [microscope.logging :as log]
             [cheshire.core :as json]
             [langohr.core :as core]
