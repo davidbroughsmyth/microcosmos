@@ -1,10 +1,10 @@
-(ns components.core-test
+(ns microscope.core-test
   (:require [midje.sweet :refer :all]
-            [components.core :as components]
-            [components.io :as io]
-            [components.future :as future]
-            [components.logging :as log]
-            [components.healthcheck :as health]
+            [microscope.core :as components]
+            [microscope.io :as io]
+            [microscope.future :as future]
+            [microscope.logging :as log]
+            [microscope.healthcheck :as health]
             [finagle-clojure.http.client :as http-client]
             [finagle-clojure.http.message :as msg]
             [cheshire.core :as json]))

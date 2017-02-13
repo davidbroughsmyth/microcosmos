@@ -1,6 +1,6 @@
-(ns components.healthcheck-test
+(ns microscope.healthcheck-test
   (:require [midje.sweet :refer :all]
-            [components.healthcheck :as health]))
+            [microscope.healthcheck :as health]))
 
 (def unhealthy-component
   (reify health/Healthcheck

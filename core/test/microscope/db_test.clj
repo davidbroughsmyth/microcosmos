@@ -1,6 +1,6 @@
-(ns components.db-test
+(ns microscope.db-test
   (:require [midje.sweet :refer :all]
-            [components.db :as db]))
+            [microscope.db :as db]))
 
 (defn mocked-db [db]
   (db/execute! db "CREATE TABLE tests (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")

@@ -1,4 +1,4 @@
-(ns components.future.test
+(ns microscope.future.test
   (:require [finagle-clojure.futures :as fut-finagle])
   (:import [com.twitter.util Awaitable]))
 

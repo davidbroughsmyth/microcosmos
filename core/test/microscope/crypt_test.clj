@@ -1,6 +1,6 @@
-(ns components.crypt-test
+(ns microscope.crypt-test
   (:require [midje.sweet :refer :all]
-            [components.crypt :as crypt]))
+            [microscope.crypt :as crypt]))
 
 (facts "about rsa encryption"
   (fact "encrypts a single text"

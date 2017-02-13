@@ -1,7 +1,7 @@
-(ns components.db.sqlite
+(ns microscope.db.sqlite
   (:require [clojure.java.jdbc :as jdbc]
-            [components.db :as db]
-            [components.healthcheck :as health])
+            [microscope.db :as db]
+            [microscope.healthcheck :as health])
   (:import [com.mchange.v2.c3p0 ComboPooledDataSource]
            [javax.sql DataSource PooledConnection]
            [java.sql DriverManager]))

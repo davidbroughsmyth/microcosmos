@@ -1,6 +1,6 @@
 (ns user
-  (:require [components.queue.rabbit :as rabbit]
-            [components.healthcheck :as health]))
+  (:require [microscope.queue.rabbit :as rabbit]
+            [microscope.healthcheck :as health]))
 
 (defn stop-system []
   (rabbit/disconnect!)

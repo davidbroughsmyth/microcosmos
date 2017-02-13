@@ -1,9 +1,9 @@
-(ns components.core
-  (:require [components.future :as future]
-            [components.logging :as log]
-            [components.io :as io]
+(ns microscope.core
+  (:require [microscope.future :as future]
+            [microscope.logging :as log]
+            [microscope.io :as io]
             [finagle-clojure.future-pool :as fut-pool]
-            [components.healthcheck :as health]))
+            [microscope.healthcheck :as health]))
 
 (def listen io/listen)
 (def send! io/send!)
@@ -47,7 +47,7 @@
 or something like that). Returns a function that can be used (and re-used) to subscribe
 to components
 
-Accepts key-value pairs to define additional components. A component generator function
+Accepts key-value pairs to define additional microscope. A component generator function
 is, normally, a function that accepts some parameters and returns another function
 (the generator). Generators MUST accept a single parameter that'll configure
 additional data, such as `:cid` and `:mocked`.
@@ -87,7 +87,7 @@ memory only, RabbitMQ is disabled and code is used to coordinate between message
 
 If the first argument is a Map, it'll be used to pass parameters to mocked environment.
 One possible parameter is `:mocks` - a map where keys are defined components, and values
-are the mocked components. Other parameters are dependend of each component implementation."
+are the mocked microscope. Other parameters are dependend of each component implementation."
   [ & args]
   (let [possible-params (first args)
         params (cond-> {:mocked true}

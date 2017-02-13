@@ -5,9 +5,9 @@ General components to be reusable in every Clojure micro-service
 ## Usage
 
 ```clojure
-(require '[components.core :as components]
-         '[components.future :as future]
-         '[components.queue.rabbit :as rabbit])
+(require '[microscope.core :as components]
+         '[microscope.future :as future]
+         '[microscope.queue.rabbit :as rabbit])
 
 (def subscribe (subscribe-with :result (rabbit/queue "results")))
 

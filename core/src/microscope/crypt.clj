@@ -1,4 +1,4 @@
-(ns components.crypt
+(ns microscope.crypt
   (:import [java.security Security KeyPairGenerator]
            [javax.crypto Cipher KeyGenerator]
            [javax.crypto.spec SecretKeySpec IvParameterSpec]

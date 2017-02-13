@@ -1,4 +1,4 @@
-(ns components.db
+(ns microscope.db
   (:require [clojure.string :as str]
             [clojure.java.jdbc :as jdbc]))
 
@@ -13,7 +13,7 @@
 
 (defn- connect-to-adapter [connection-params params]
   (let [adapter (:adapter connection-params)
-        _ (require [(symbol (str "components.db." (name adapter)))])
+        _ (require [(symbol (str "microscope.db." (name adapter)))])
         conn-factory (get @adapter-fns adapter)]
     (conn-factory connection-params params)))
 

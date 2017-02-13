@@ -1,9 +1,9 @@
-(ns components.db.sqlite-test
+(ns microscope.db.sqlite-test
   (:require [midje.sweet :refer :all]
-            [components.core :as components]
-            [components.healthcheck :as health]
-            [components.db :as db]
-            [components.db.sqlite :as sqlite]
+            [microscope.core :as components]
+            [microscope.healthcheck :as health]
+            [microscope.db :as db]
+            [microscope.db.sqlite :as sqlite]
             [clojure.java.jdbc :as jdbc]
             [clojure.java.io :as io]))
 

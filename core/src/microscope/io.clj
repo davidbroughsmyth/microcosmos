@@ -1,4 +1,4 @@
-(ns components.io)
+(ns microscope.io)
 
 (defprotocol IO
   (listen [component function]

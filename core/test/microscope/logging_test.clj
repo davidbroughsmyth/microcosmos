@@ -1,7 +1,7 @@
-(ns components.logging-test
+(ns microscope.logging-test
   (:require [midje.sweet :refer :all]
-            [components.core :as components]
-            [components.logging :as log]
+            [microscope.core :as components]
+            [microscope.logging :as log]
             [cheshire.core :as cheshire]))
 
 (def default-logger (log/default-logger-gen {}))

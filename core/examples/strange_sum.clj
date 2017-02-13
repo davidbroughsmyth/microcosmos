@@ -1,8 +1,8 @@
 (ns strange-sum
-  (:require [components.core :as components]
-            [components.logging :as log]
-            [components.future :as future]
-            [components.queue.rabbit :as rabbit]))
+  (:require [microscope.core :as components]
+            [microscope.logging :as log]
+            [microscope.future :as future]
+            [microscope.queue.rabbit :as rabbit]))
 
 (defn logger [{:keys [cid]}]
   (log/->DebugLogger cid))

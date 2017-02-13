@@ -1,10 +1,10 @@
-(ns components.queue.rabbit
+(ns microscope.queue.rabbit
   (:require [cheshire.core :as json]
             [cheshire.generate :as generators]
             [clojure.core :as clj]
-            [components.io :as io]
-            [components.healthcheck :as health]
-            [components.future :as future]
+            [microscope.io :as io]
+            [microscope.healthcheck :as health]
+            [microscope.future :as future]
             [langohr.basic :as basic]
             [langohr.channel :as channel]
             [langohr.consumers :as consumers]

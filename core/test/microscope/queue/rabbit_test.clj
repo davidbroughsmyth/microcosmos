@@ -1,9 +1,9 @@
-(ns components.queue.rabbit-test
-  (:require [components.core :as components]
-            [components.healthcheck :as health]
-            [components.future :as future]
-            [components.queue.rabbit :as rabbit]
-            [components.logging :as log]
+(ns microscope.queue.rabbit-test
+  (:require [microscope.core :as components]
+            [microscope.healthcheck :as health]
+            [microscope.future :as future]
+            [microscope.queue.rabbit :as rabbit]
+            [microscope.logging :as log]
             [cheshire.core :as json]
             [langohr.core :as core]
             [midje.sweet :refer :all]))

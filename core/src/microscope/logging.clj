@@ -1,4 +1,4 @@
-(ns components.logging
+(ns microscope.logging
   (:require [cheshire.core :as cheshire]
             [cheshire.generate :as generators]))
 

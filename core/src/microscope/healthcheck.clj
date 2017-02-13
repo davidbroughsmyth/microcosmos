@@ -1,6 +1,6 @@
-(ns components.healthcheck
-  (:require [components.future :as future]
-            [components.io :as io]
+(ns microscope.healthcheck
+  (:require [microscope.future :as future]
+            [microscope.io :as io]
             [cheshire.core :as json]
             [finagle-clojure.builder.server :as builder-server]
             [finagle-clojure.service :as service]
