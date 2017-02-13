@@ -5,6 +5,7 @@
             [microscope.io :as io]
             [microscope.healthcheck :as health]
             [microscope.future :as future]
+            [microscope.logging :as log]
             [langohr.basic :as basic]
             [langohr.channel :as channel]
             [langohr.consumers :as consumers]
@@ -97,6 +98,9 @@
   (ack! [_ {:keys [meta]}]
         (basic/ack channel (:delivery-tag meta)))
 
+  (log-message [_ logger msg]
+               (log/info logger "Processing message" :msg msg))
+
   (reject! [self msg _]
            (let [meta (:meta msg)
                  meta (assoc meta :headers (normalize-headers meta))
@@ -186,7 +190,9 @@
     (swap! messages conj :ACK))
 
   (reject! [self msg ex]
-    (swap! messages conj :REJECT)))
+    (swap! messages conj :REJECT))
+
+  (log-message [_ _ _]))
 
 (defn- mocked-rabbit-queue [name cid delayed]
   (let [name-k (keyword name)

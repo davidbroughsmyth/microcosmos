@@ -33,7 +33,7 @@
         result-queue (rabbit/queue "test-result" :auto-delete true)
         channel (:channel (result-queue {}))
         deadletter-queue (fn [_] (rabbit/->Queue channel "test-deadletter" 1000 "FOO"))
-        sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
+        sub (components/subscribe-with :result-q result-queue
                                        :logger (fn [_] logger)
                                        :test-queue test-queue
                                        :result-queue result-queue
