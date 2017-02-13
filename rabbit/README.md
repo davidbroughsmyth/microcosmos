@@ -7,6 +7,14 @@ is a simple ACK, and `reject` will try requeue the message for a number of times
 configurable by `:max-retries` parameter, after which it'll just reject it and send it to
 a deadletter.
 
+## Mocked version
+
+A mocked version of the queue is simply a group of atoms in the Clojure. They will listen
+to each other, and publish/subscribe exactly the same as a real queue, but no Rabbit
+installation is needed. It is possible to check the queue's states on `queue` atom, from
+`microscope.rabbit.queue` namespace. Notice that this atom is only populated on a mocked
+environment
+
 ## Usage
 
 ```clojure
