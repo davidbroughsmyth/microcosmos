@@ -141,7 +141,7 @@
                            :durable true
                            :ttl (* 24 60 60 1000)})
 
-(defn- real-rabbit-queue [name opts cid]
+(defn- real-rabbit-queue [name opts]
   (let [opts (merge default-queue-params opts)
         [connection channel] (connection-to-queue name (:prefetch-count opts))
         dead-letter-name (str name "-dlx")
@@ -162,7 +162,7 @@
 
     (exchange/fanout channel dead-letter-name {:durable true})
     (queue/bind channel dead-letter-q-name dead-letter-name)
-    (->Queue channel name (:max-retries opts) cid)))
+    (->Queue channel name (:max-retries opts) nil)))
 
 (def queues (atom {}))
 
@@ -213,7 +213,8 @@ parameters:
 "
   [name & {:as opts}]
   (clear-mocked-env!)
-  (fn [{:keys [cid mocked]}]
-    (if mocked
-      (mocked-rabbit-queue name cid (:delayed opts))
-      (real-rabbit-queue name opts cid))))
+  (let [queue (delay (real-rabbit-queue name opts))]
+    (fn [{:keys [cid mocked]}]
+      (if mocked
+        (mocked-rabbit-queue name cid (:delayed opts))
+        (assoc @queue :cid cid)))))
