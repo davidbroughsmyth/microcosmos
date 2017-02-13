@@ -8,12 +8,18 @@
 (def just fut-finagle/value)
 (def join fut-finagle/collect)
 
-(def ^:private cpus (.availableProcessors (Runtime/getRuntime)))
+(def num-cpus (.availableProcessors (Runtime/getRuntime)))
 (defonce pool (fut-pool/future-pool
-                (Executors/newFixedThreadPool (* cpus 2))))
+                (Executors/newFixedThreadPool (+ 2 (* num-cpus 2)))))
 
 (defn map [fun & objs]
   (fut-finagle/map* (fut-finagle/collect objs) #(apply fun %)))
+
+(defn intercept [fun & objs]
+  (case (count objs)
+    0 (throw (IllegalArgumentException. "Must have at least 1 future in list"))
+    1 (fut-finagle/map* (first objs) #(do (fun %) %))
+    (fut-finagle/map* (fut-finagle/collect objs) #(do (apply fun %) %))))
 
 (defn flat-map [fun & objs]
   (fut-finagle/flatmap* (fut-finagle/collect objs) #(apply fun %)))
@@ -25,13 +31,10 @@
     (fut-finagle/on-success* (fut-finagle/collect objs) #(do (apply fun %) nil))))
 
 (defn on-failure [fun & objs]
-  (fut-finagle/on-failure* (fut-finagle/collect objs) #(do
-                                                         (fun %)
-                                                         nil)))
+  (fut-finagle/on-failure* (fut-finagle/collect objs) #(do (fun %) nil)))
+
 (defn on-finish [fun & objs]
-  (fut-finagle/ensure* (fut-finagle/collect objs) #(do
-                                                     (fun)
-                                                     nil)))
+  (fut-finagle/ensure* (fut-finagle/collect objs) #(do (fun) nil)))
 
 (defmacro execute [ & args]
   `(fut-pool/run* pool ~(cons `fn (cons [] args))))
