@@ -19,4 +19,7 @@ Some services can choose to ignore this.")
   (reject! [component param ex]
           "Rejects this message. Indicates to service thar some error has
 occurred, and some action should be done. Some services can choose to ignore
-this"))
+this")
+  (log-message [component log message]
+               "Logs that we're consuming a message. This can be ignored by
+some components (like Healthcheck, for example)."))

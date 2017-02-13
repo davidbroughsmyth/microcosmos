@@ -56,7 +56,8 @@ reasons why that component is marked as unhealthy"))
        (ack! [_ _])
        (reject! [_ _ _]
                 (deliver @p
-                         (future/just (-> (msg/response 404)))))))))
+                         (future/just (-> (msg/response 404)))))
+       (log-message [_ _ _])))))
 
 (defn health-checker-gen [params]
   (if (:mocked params)
