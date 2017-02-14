@@ -3,8 +3,7 @@
             [microscope.relational-db :as db]))
 
 (defn db [file-name]
-  (db/gen-constructor
-   (db/db-for "org.hsqldb.jdbc.JDBCDriver"
-              (str "jdbc:hsqldb:" file-name)
-              "SA"
-              "")))
+  (-> "org.hsqldb.jdbc.JDBCDriver"
+      (db/pool-for (str "jdbc:hsqldb:" file-name) "SA" "")
+      db/->HSQLDB
+      db/gen-constructor))
