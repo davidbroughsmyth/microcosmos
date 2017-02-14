@@ -7,7 +7,7 @@
                  [microscope "0.1.0"]
                  [com.mchange/c3p0 "0.9.2.1"]
                  [org.clojure/java.jdbc "0.6.1"]
-                 [org.xerial/sqlite-jdbc "3.15.1"]]
+                 [org.hsqldb/hsqldb "2.3.4"]]
 
   :profiles {:dev {:src-paths ["dev"]
                    :dependencies [[midje "1.8.3"]]
