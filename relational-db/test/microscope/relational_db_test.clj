@@ -1,7 +1,7 @@
 (ns microscope.relational-db-test
   (:require [midje.sweet :refer :all]
             [microscope.relational-db :as db]
-            [microscope.relational-db.sqlite :as sqlite]
+            [microscope.relational-db.hsqldb :as hsqldb]
             [microscope.healthcheck :as health]
             [clojure.java.jdbc :as jdbc]))
 
@@ -9,14 +9,13 @@
   (let [pool (db/db-for "org.sqlite.JDBC" "jdbc:sqlite::memory:" nil nil)]
     (jdbc/query pool "SELECT 'foo' as bar") => [{:bar "foo"}]))
 
-
 (defn mocked-db [db]
   (jdbc/execute! db "CREATE TABLE tests (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
   (jdbc/execute! db ["INSERT INTO tests VALUES (?, ?)" "foo" "bar"]))
 
 (facts "about mocked environment"
   (fact "defines a memory database, with pool size=1"
-    (let [db (db/sqlite-memory mocked-db)]
+    (let [db (db/hsqldb-memory mocked-db)]
       (jdbc/query db "SELECT * FROM tests") => [{:id "foo" :name "bar"}]))
 
   (fact "allows definition of fake database with fake rows"
@@ -28,7 +27,7 @@
   (fact "allow transactions"
     (let [db (db/fake-rows mocked-db {:tests [{:id "faa" :name "bar"}]})]
       (jdbc/with-db-transaction [db db]
-        (jdbc/execute! db ["UPDATE tests SET name=:name" "test"])
+        (jdbc/execute! db ["UPDATE tests SET name=?" "test"])
 
         (fact "inside transaction, name is 'test'"
           (jdbc/query db "SELECT * FROM tests WHERE id='faa'")
@@ -42,16 +41,16 @@
 
   (facts "about memory database"
     (fact "uses a different DB everytime we need one"
-      (let [db1 (db/sqlite-memory nil)
-            db2 (db/sqlite-memory nil)]
+      (let [db1 (db/hsqldb-memory nil)
+            db2 (db/hsqldb-memory nil)]
         (jdbc/execute! db1 "CREATE TABLE foo (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
         (jdbc/execute! db2 "CREATE TABLE foo (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
-        (jdbc/execute! db2 ["INSERT INTO foo VALUES (:id, :name)" "foo" "bar"]) => [1]
+        (jdbc/execute! db2 ["INSERT INTO foo VALUES (?, ?)" "foo" "bar"]) => [1]
         (jdbc/query db1 "SELECT * FROM foo") => []))))
 
 (fact "wraps connection pool in a service constructor"
-  (let [c1 (db/gen-constructor (db/sqlite-memory nil))
-        c2 (db/gen-constructor (db/sqlite-memory nil))]
+  (let [c1 (db/gen-constructor (db/hsqldb-memory nil))
+        c2 (db/gen-constructor (db/hsqldb-memory nil))]
     (jdbc/execute! (c1 {})
                    "CREATE TABLE foo (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
     (jdbc/execute! (c2 {})
@@ -59,7 +58,7 @@
 
     (fact "second calls to constructor will reuse pool"
       (jdbc/execute! (c1 {})
-                     ["INSERT INTO foo VALUES (:id, :name)" "foo" "bar"]) => [1]
+                     ["INSERT INTO foo VALUES (?, ?)" "foo" "bar"]) => [1]
       (jdbc/query (c2 {}) "SELECT * FROM foo") => []))
 
   (fact "will return a memory DB if mocked"
@@ -69,7 +68,7 @@
                   "SELECT * FROM tests") => [{:id "foo" :name "bar"}])))
 
 (facts "about healthcheck"
-  (let [db (db/sqlite-memory nil)]
+  (let [db (db/hsqldb-memory nil)]
     (fact "healthchecks when DB is connected"
       (health/check {:db db}) => {:result true :details {:db nil}})
 

@@ -4,28 +4,36 @@
             [clojure.string :as str])
   (:import [com.mchange.v2.c3p0 ComboPooledDataSource]))
 
+(defn- check-select [db sql]
+  (let [[result] (try (jdbc/query db sql)
+                   (catch java.sql.SQLException _ [])
+                   (catch Exception e [e]))]
+    (case result
+      {:ok "ok"} nil
+      nil {:connection "failed simple select"}
+      {:connection "unknown error"
+       :exception-type (.getName (.getClass result))
+       :exception-msg (.getMessage result)})))
+
 (defrecord Database [datasource]
   health/Healthcheck
-  (unhealthy? [self]
-    (let [[result] (try (jdbc/query self "SELECT 'ok' as ok ")
-                     (catch java.sql.SQLException _ [])
-                     (catch Exception e [e]))]
-      (case result
-        {:ok "ok"} nil
-        nil {:connection "failed simple select"}
-        {:connection "unknown error"
-         :exception-type (.getName (.getClass result))
-         :exception-msg (.getMessage result)}))))
+  (unhealthy? [self] (check-select self "SELECT 'ok' as ok")))
+
+(defrecord HSQLDB [datasource]
+  health/Healthcheck
+  (unhealthy? [self] (check-select self "SELECT 'ok' as ok FROM (VALUES(0))")))
+
+(defn pool-for [driver url username password]
+  (doto (ComboPooledDataSource.)
+        (.setDriverClass driver)
+        (.setJdbcUrl url)
+        (.setUser username)
+        (.setPassword password)
+        (.setMaxIdleTimeExcessConnections (* 30 60))
+        (.setMaxIdleTime (* 3 60 60))))
 
 (defn db-for [driver url username password]
-  (let [pool (doto (ComboPooledDataSource.)
-                   (.setDriverClass driver)
-                   (.setJdbcUrl url)
-                   (.setUser username)
-                   (.setPassword password)
-                   (.setMaxIdleTimeExcessConnections (* 30 60))
-                   (.setMaxIdleTime (* 3 60 60)))]
-    (->Database pool)))
+  (->Database (pool-for driver url username password)))
 
 (defn sqlite-memory [setup-db-fn]
   (let [db (db-for "org.sqlite.JDBC" "jdbc:sqlite::memory:" nil nil)
@@ -33,6 +41,14 @@
                    (.setMaxPoolSize 1)
                    (.setMinPoolSize 1)
                    (.setInitialPoolSize 1))]
+    (when setup-db-fn (setup-db-fn db))
+    db))
+
+(defn hsqldb-memory [setup-db-fn]
+  (let [pool (pool-for "org.hsqldb.jdbc.JDBCDriver"
+                       (str "jdbc:hsqldb:mem:" (rand) ";shutdown=true")
+                       "SA" "")
+        db (->HSQLDB pool)]
     (when setup-db-fn (setup-db-fn db))
     db))
 
