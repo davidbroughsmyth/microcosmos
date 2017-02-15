@@ -47,17 +47,18 @@
   `(let [pool# (delay ~code)]
      (fn [params#]
        (if (:mocked params#)
-         (sqlite-memory (:setup-db-fn params#))
+         (hsqldb-memory (:setup-db-fn params#))
          @pool#))))
 
 (defn insert! [db table attributes]
   (let [keys (keys attributes)
-        fields (map name keys)]
+        fields (map name keys)
+        ?s (map (constantly "?") keys)]
     (jdbc/execute! db
                    (cons
                     (str "INSERT INTO " table
                          "(" (str/join "," fields) ")"
-                         " VALUES(" (str/join "," keys) ")")
+                         " VALUES(" (str/join "," ?s) ")")
                     (vals attributes)))))
 
 (defn fake-rows
