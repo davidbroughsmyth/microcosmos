@@ -30,8 +30,26 @@
       (crypt/asymmetric-enc txt (:public key)) =not=> txt
       (crypt/asymmetric-dec (crypt/asymmetric-enc txt (:public key)) (:private key)) => txt)))
 
-(fact "transforms a structure to an encrypted one"
+(facts "about encryption"
   (let [{:keys [public private]} (crypt/gen-keys 2048)
-        base64-key (crypt/to-base64 (.getEncoded public))
-        enc (crypt/encrypt [{:some "structure"}] (crypt/key-from-base64 base64-key))]
-    (crypt/asymmetric-dec enc private) => "[{\"some\":\"structure\"}]"))
+        public-base64-key (crypt/to-base64 (.getEncoded public))
+        private-base64-key (crypt/to-base64 (.getEncoded private))]
+
+    (fact "transforms a structure to an encrypted one"
+      (let [enc (crypt/encrypt [{:so-me "structure"}]
+                               (crypt/public-key-from-base64 public-base64-key))]
+        (crypt/asymmetric-dec enc private) => "[{\"so_me\":\"structure\"}]"))
+
+    (fact "transforms an encrypted structure to a decrypted one"
+      (let [enc (crypt/asymmetric-enc "[{\"so_me\":\"structure\"}]" public)]
+        (crypt/decrypt enc (crypt/private-key-from-base64 private-base64-key))
+        => [{:so-me "structure"}]))
+
+    (fact "functions are complementary"
+      (let [public-base64-key (crypt/to-base64 (.getEncoded public))
+            private-base64-key (crypt/to-base64 (.getEncoded private))
+            message [{:so-me "structure"}]]
+        (crypt/decrypt (crypt/encrypt message
+                                      (crypt/public-key-from-base64 public-base64-key))
+                       (crypt/private-key-from-base64 private-base64-key))
+        => message))))

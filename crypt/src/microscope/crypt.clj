@@ -1,4 +1,5 @@
 (ns microscope.crypt
+  (:require [microscope.io :as io])
   (:import [java.security Security KeyPairGenerator]
            [javax.crypto Cipher KeyGenerator]
            [javax.crypto.spec SecretKeySpec IvParameterSpec]
@@ -92,11 +93,21 @@
         key (rsa-dec encr-key private-key)]
     (to-string (aes-dec cipher-text key))))
 
-(defn key-from-base64 [base64-str]
+(defn public-key-from-base64 [base64-str]
   (let [key-bytes (base64->bytes base64-str)
         spec (java.security.spec.X509EncodedKeySpec. key-bytes)
         key-factory (java.security.KeyFactory/getInstance "RSA")]
     (.generatePublic key-factory spec)))
 
+(defn private-key-from-base64 [base64-str]
+  (let [key-bytes (base64->bytes base64-str)
+        spec (java.security.spec.PKCS8EncodedKeySpec. key-bytes)
+        key-factory (java.security.KeyFactory/getInstance "RSA")]
+    (.generatePrivate key-factory spec)))
+
 (defn encrypt [sexp pubkey]
-  (asymmetric-enc (json/generate-string sexp) pubkey))
+  (-> sexp io/serialize-msg (asymmetric-enc pubkey)))
+
+(defn decrypt [message privkey]
+  (let [json (asymmetric-dec message privkey)]
+    (io/deserialize-msg json)))
