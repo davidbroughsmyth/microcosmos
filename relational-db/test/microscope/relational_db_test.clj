@@ -6,8 +6,8 @@
             [clojure.java.jdbc :as jdbc]))
 
 (fact "creates a connection pooled database"
-  (let [pool (db/db-for "org.sqlite.JDBC" "jdbc:sqlite::memory:" nil nil)]
-    (jdbc/query pool "SELECT 'foo' as bar") => [{:bar "foo"}]))
+  (let [pool (db/db-for "org.hsqldb.jdbc.JDBCDriver" "jdbc:hsqldb:mem:1" nil nil)]
+    (jdbc/query pool "SELECT 'foo' as bar FROM (VALUES(0))") => [{:bar "foo"}]))
 
 (defn mocked-db [db]
   (jdbc/execute! db "CREATE TABLE tests (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
