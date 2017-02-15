@@ -29,3 +29,9 @@
     (fact "encrypts a long text"
       (crypt/asymmetric-enc txt (:public key)) =not=> txt
       (crypt/asymmetric-dec (crypt/asymmetric-enc txt (:public key)) (:private key)) => txt)))
+
+(fact "transforms a structure to an encrypted one"
+  (let [{:keys [public private]} (crypt/gen-keys 2048)
+        base64-key (crypt/to-base64 (.getEncoded public))
+        enc (crypt/encrypt [{:some "structure"}] (crypt/key-from-base64 base64-key))]
+    (crypt/asymmetric-dec enc private) => "[{\"some\":\"structure\"}]"))

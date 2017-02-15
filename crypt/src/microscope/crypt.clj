@@ -92,13 +92,11 @@
         key (rsa-dec encr-key private-key)]
     (to-string (aes-dec cipher-text key))))
 
-(defn slurp-key [f]
-  (-> f
-      java.io.FileReader.
-      org.bouncycastle.openssl.PEMReader.
-      .readObject))
+(defn key-from-base64 [base64-str]
+  (let [key-bytes (base64->bytes base64-str)
+        spec (java.security.spec.X509EncodedKeySpec. key-bytes)
+        key-factory (java.security.KeyFactory/getInstance "RSA")]
+    (.generatePublic key-factory spec)))
 
-(defn spit-key [f keys]
-  (let [writer (org.bouncycastle.openssl.PEMWriter. (java.io.FileWriter. f))]
-    (.writeObject writer keys)
-    (.flush writer)))
+(defn encrypt [sexp pubkey]
+  (asymmetric-enc (json/generate-string sexp) pubkey))
