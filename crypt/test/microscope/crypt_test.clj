@@ -30,7 +30,7 @@
       (crypt/asymmetric-enc txt (:public key)) =not=> txt
       (crypt/asymmetric-dec (crypt/asymmetric-enc txt (:public key)) (:private key)) => txt)))
 
-(facts "about encryption"
+(facts "about structural encryption"
   (let [{:keys [public private]} (crypt/gen-keys 2048)
         public-base64-key (crypt/to-base64 (.getEncoded public))
         private-base64-key (crypt/to-base64 (.getEncoded private))]
@@ -52,4 +52,18 @@
         (crypt/decrypt (crypt/encrypt message
                                       (crypt/public-key-from-base64 public-base64-key))
                        (crypt/private-key-from-base64 private-base64-key))
-        => message))))
+        => message))
+
+    (fact "creates a factory for encryption/decryption"
+      (let [enc-factory (crypt/for-encryption public-base64-key)
+            dec-factory (crypt/for-decryption private-base64-key)]
+
+        (fact "factories are complementary"
+          (let [enc ((enc-factory {}) "some-payload")
+                dec ((dec-factory {}) enc)]
+            dec => "some-payload"))
+
+        (fact "factories can be mocked"
+          ((enc-factory {:mocked true}) "some-payload") => {:ENCRYPTED "some-payload"}
+          ((dec-factory {:mocked true}) {:ENCRYPTED "some-payload"})
+          => "some-payload")))))
