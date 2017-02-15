@@ -113,13 +113,15 @@
     (io/deserialize-msg json)))
 
 (defn for-encryption [public-base64-key]
-  (fn [{:keys [mocked]}]
-    (if mocked
-      (fn [sexp] {:ENCRYPTED sexp})
-      #(encrypt % (public-key-from-base64 public-base64-key)))))
+  (let [key (delay (public-key-from-base64 public-base64-key))]
+    (fn [{:keys [mocked]}]
+      (if mocked
+        (fn [sexp] {:ENCRYPTED sexp})
+        #(encrypt % @key)))))
 
 (defn for-decryption [private-base64-key]
-  (fn [{:keys [mocked]}]
-    (if mocked
-      #(or (:ENCRYPTED %) (throw (ex-info "Not Crypted!" {:msg %})))
-      #(decrypt % (private-key-from-base64 private-base64-key)))))
+  (let [key (delay (private-key-from-base64 private-base64-key))]
+    (fn [{:keys [mocked]}]
+      (if mocked
+        #(or (:ENCRYPTED %) (throw (ex-info "Not Crypted!" {:msg %})))
+        #(decrypt % @key)))))
