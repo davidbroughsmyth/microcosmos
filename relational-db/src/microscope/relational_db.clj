@@ -35,15 +35,6 @@
 (defn db-for [driver url username password]
   (->Database (pool-for driver url username password)))
 
-(defn sqlite-memory [setup-db-fn]
-  (let [db (db-for "org.sqlite.JDBC" "jdbc:sqlite::memory:" nil nil)
-        pool (doto (:datasource db)
-                   (.setMaxPoolSize 1)
-                   (.setMinPoolSize 1)
-                   (.setInitialPoolSize 1))]
-    (when setup-db-fn (setup-db-fn db))
-    db))
-
 (defn hsqldb-memory [setup-db-fn]
   (let [pool (pool-for "org.hsqldb.jdbc.JDBCDriver"
                        (str "jdbc:hsqldb:mem:" (rand) ";shutdown=true")
@@ -80,7 +71,7 @@ Usage example:
                     {:example [{:name \"foo\"} {:name \"bar\"}]}]
   (jdbc/query \"SELECT * FROM example\"))"
   [prepare-fn tables-and-rows]
-  (let [db (sqlite-memory prepare-fn)]
+  (let [db (hsqldb-memory prepare-fn)]
     (doseq [[table rows] tables-and-rows
             row rows]
       (insert! db (name table) row))
