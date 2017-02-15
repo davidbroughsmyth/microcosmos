@@ -52,12 +52,12 @@
 
 (defn insert! [db table attributes]
   (let [keys (keys attributes)
-        fields (map name keys)
+        fields (map #(str "\"" (-> % name (str/replace #"\"", "\"\"")) "\"") keys)
         ?s (map (constantly "?") keys)]
     (jdbc/execute! db
                    (cons
-                    (str "INSERT INTO " table
-                         "(" (str/join "," fields) ")"
+                    (str "INSERT INTO \"" table
+                         "\" (" (str/join "," fields) ")"
                          " VALUES(" (str/join "," ?s) ")")
                     (vals attributes)))))
 
