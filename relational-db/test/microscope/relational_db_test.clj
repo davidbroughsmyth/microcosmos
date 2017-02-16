@@ -63,11 +63,14 @@
       (jdbc/query (c2 {}) "SELECT * FROM foo") => []))
 
   (fact "will return a memory DB if mocked"
-    (let [constructor (db/gen-constructor (db/db-for "foo" "bar" "" ""))]
-      (jdbc/query (constructor {:mocked true
-                                :setup-db-fn mocked-db})
-                  "SELECT * FROM \"tests\"") => [{:id "foo" :name "bar"}]
-      (jdbc/query db/mocked-db "SELECT * FROM \"tests\"")
+    (let [c (db/gen-constructor (db/db-for "foo" "bar" "" ""))]
+      (jdbc/query (c {:mocked true :setup-db-fn mocked-db}) "SELECT * FROM \"tests\"")
+      => [{:id "foo" :name "bar"}]
+      (jdbc/execute! db/mocked-db "UPDATE \"tests\" SET \"name\"='arr'")
+      (jdbc/query (c {:mocked true}) "SELECT * FROM \"tests\"")
+      => [{:id "foo" :name "arr"}]
+      (jdbc/query ((db/gen-constructor (db/db-for "foo" "bar" "" ""))
+                   {:mocked true :setup-db-fn mocked-db}) "SELECT * FROM \"tests\"")
       => [{:id "foo" :name "bar"}])))
 
 (facts "about healthcheck"
