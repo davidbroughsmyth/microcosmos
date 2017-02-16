@@ -43,11 +43,17 @@
     (when setup-db-fn (setup-db-fn db))
     db))
 
+(def ^:dynamic mocked-db nil)
+(defn mock-memory-db [setup-db-fn]
+  (let [db (hsqldb-memory setup-db-fn)]
+    (alter-var-root #'mocked-db (constantly db))
+    db))
+
 (defmacro gen-constructor [code]
   `(let [pool# (delay ~code)]
      (fn [params#]
        (if (:mocked params#)
-         (hsqldb-memory (:setup-db-fn params#))
+         (mock-memory-db (:setup-db-fn params#))
          @pool#))))
 
 (defn insert! [db table attributes]

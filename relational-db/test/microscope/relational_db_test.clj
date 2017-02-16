@@ -66,7 +66,9 @@
     (let [constructor (db/gen-constructor (db/db-for "foo" "bar" "" ""))]
       (jdbc/query (constructor {:mocked true
                                 :setup-db-fn mocked-db})
-                  "SELECT * FROM \"tests\"") => [{:id "foo" :name "bar"}])))
+                  "SELECT * FROM \"tests\"") => [{:id "foo" :name "bar"}]
+      (jdbc/query db/mocked-db "SELECT * FROM \"tests\"")
+      => [{:id "foo" :name "bar"}])))
 
 (facts "about healthcheck"
   (let [db (db/hsqldb-memory nil)]
