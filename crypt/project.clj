@@ -1,13 +1,11 @@
-(defproject microscope/relational-db "0.1.0"
-  :description "Microservice architecture for Clojure"
+(defproject microscope/crypt "0.1.0"
+  :description "Encrypt/Decrypt getting keys from env variables"
   :url "https://github.com/acessocard/microscope"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [microscope "0.1.0"]
-                 [com.mchange/c3p0 "0.9.2.1"]
-                 [org.clojure/java.jdbc "0.6.1"]
-                 [org.hsqldb/hsqldb "2.3.4"]]
+                 [bouncycastle/bcprov-jdk16 "140"]]
 
   :profiles {:dev {:src-paths ["dev"]
                    :dependencies [[midje "1.8.3"]]

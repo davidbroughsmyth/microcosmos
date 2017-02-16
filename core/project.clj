@@ -9,8 +9,7 @@
                  [cheshire "5.6.3"]
                  [finagle-clojure/core "0.7.0"]
                  [finagle-clojure/http "0.7.0"]
-                 [environ "1.1.0"]
-                 [bouncycastle/bcprov-jdk16 "140"]]
+                 [environ "1.1.0"]]
 
   :profiles {:dev {:src-paths ["dev"]
                    :dependencies [[midje "1.8.3"]]

@@ -1,4 +1,5 @@
 (ns microscope.crypt
+  (:require [microscope.io :as io])
   (:import [java.security Security KeyPairGenerator]
            [javax.crypto Cipher KeyGenerator]
            [javax.crypto.spec SecretKeySpec IvParameterSpec]
@@ -92,13 +93,35 @@
         key (rsa-dec encr-key private-key)]
     (to-string (aes-dec cipher-text key))))
 
-(defn slurp-key [f]
-  (-> f
-      java.io.FileReader.
-      org.bouncycastle.openssl.PEMReader.
-      .readObject))
+(defn public-key-from-base64 [base64-str]
+  (let [key-bytes (base64->bytes base64-str)
+        spec (java.security.spec.X509EncodedKeySpec. key-bytes)
+        key-factory (java.security.KeyFactory/getInstance "RSA")]
+    (.generatePublic key-factory spec)))
 
-(defn spit-key [f keys]
-  (let [writer (org.bouncycastle.openssl.PEMWriter. (java.io.FileWriter. f))]
-    (.writeObject writer keys)
-    (.flush writer)))
+(defn private-key-from-base64 [base64-str]
+  (let [key-bytes (base64->bytes base64-str)
+        spec (java.security.spec.PKCS8EncodedKeySpec. key-bytes)
+        key-factory (java.security.KeyFactory/getInstance "RSA")]
+    (.generatePrivate key-factory spec)))
+
+(defn encrypt [sexp pubkey]
+  (-> sexp io/serialize-msg (asymmetric-enc pubkey)))
+
+(defn decrypt [message privkey]
+  (let [json (asymmetric-dec message privkey)]
+    (io/deserialize-msg json)))
+
+(defn for-encryption [public-base64-key]
+  (let [key (delay (public-key-from-base64 public-base64-key))]
+    (fn [{:keys [mocked]}]
+      (if mocked
+        (fn [sexp] {:ENCRYPTED sexp})
+        #(encrypt % @key)))))
+
+(defn for-decryption [private-base64-key]
+  (let [key (delay (private-key-from-base64 private-base64-key))]
+    (fn [{:keys [mocked]}]
+      (if mocked
+        #(or (:ENCRYPTED %) (throw (ex-info "Not Crypted!" {:msg %})))
+        #(decrypt % @key)))))

@@ -40,7 +40,7 @@
     (apply dissoc headers (map name rabbit-default-meta))))
 
 (defn- parse-payload [payload]
-  (-> payload (String. "UTF-8") (json/decode true)))
+  (-> payload (String. "UTF-8") io/deserialize-msg))
 
 (defn- retries-so-far [meta]
   (get-in meta [:headers "retries"] 0))
@@ -91,7 +91,7 @@
 
   (send! [_ {:keys [payload meta] :or {meta {}}}]
          (when-not cid (raise-error))
-         (let [payload (json/encode payload)
+         (let [payload (io/serialize-msg payload)
                meta (assoc meta :headers (normalize-headers (assoc meta :cid cid)))]
            (basic/publish channel name "" payload meta)))
 
@@ -104,7 +104,7 @@
   (reject! [self msg _]
            (let [meta (:meta msg)
                  meta (assoc meta :headers (normalize-headers meta))
-                 payload (-> msg :payload json/encode)]
+                 payload (-> msg :payload io/serialize-msg)]
              (reject-or-requeue self meta payload)))
 
   health/Healthcheck
