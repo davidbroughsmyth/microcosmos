@@ -8,11 +8,6 @@
 
 Type can be :info, :warning, :error or :fatal"))
 
-(defn decorate-logger [logger cid]
-  (reify Log
-    (log [_ message type data]
-         (log logger message type (assoc data :cid cid)))))
-
 (defrecord StdoutLogger [cid]
   Log
   (log [_ message type data]
