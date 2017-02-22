@@ -35,15 +35,6 @@
 (defn db-for [driver url username password]
   (->Database (pool-for driver url username password)))
 
-(defn sqlite-memory [setup-db-fn]
-  (let [db (db-for "org.sqlite.JDBC" "jdbc:sqlite::memory:" nil nil)
-        pool (doto (:datasource db)
-                   (.setMaxPoolSize 1)
-                   (.setMinPoolSize 1)
-                   (.setInitialPoolSize 1))]
-    (when setup-db-fn (setup-db-fn db))
-    db))
-
 (defn hsqldb-memory [setup-db-fn]
   (let [pool (pool-for "org.hsqldb.jdbc.JDBCDriver"
                        (str "jdbc:hsqldb:mem:" (rand) ";shutdown=true")
@@ -52,21 +43,28 @@
     (when setup-db-fn (setup-db-fn db))
     db))
 
+(def ^:dynamic mocked-db nil)
+(defn mock-memory-db [setup-db-fn]
+  (alter-var-root #'mocked-db #(or % (hsqldb-memory setup-db-fn)))
+  mocked-db)
+
 (defmacro gen-constructor [code]
   `(let [pool# (delay ~code)]
+     (alter-var-root #'mocked-db (constantly nil))
      (fn [params#]
        (if (:mocked params#)
-         (sqlite-memory (:setup-db-fn params#))
+         (mock-memory-db (:setup-db-fn params#))
          @pool#))))
 
 (defn insert! [db table attributes]
   (let [keys (keys attributes)
-        fields (map name keys)]
+        fields (map #(str "\"" (-> % name (str/replace #"\"", "\"\"")) "\"") keys)
+        ?s (map (constantly "?") keys)]
     (jdbc/execute! db
                    (cons
-                    (str "INSERT INTO " table
-                         "(" (str/join "," fields) ")"
-                         " VALUES(" (str/join "," keys) ")")
+                    (str "INSERT INTO \"" table
+                         "\" (" (str/join "," fields) ")"
+                         " VALUES(" (str/join "," ?s) ")")
                     (vals attributes)))))
 
 (defn fake-rows
@@ -80,7 +78,7 @@ Usage example:
                     {:example [{:name \"foo\"} {:name \"bar\"}]}]
   (jdbc/query \"SELECT * FROM example\"))"
   [prepare-fn tables-and-rows]
-  (let [db (sqlite-memory prepare-fn)]
+  (let [db (hsqldb-memory prepare-fn)]
     (doseq [[table rows] tables-and-rows
             row rows]
       (insert! db (name table) row))

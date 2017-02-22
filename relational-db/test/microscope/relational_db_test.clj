@@ -6,37 +6,38 @@
             [clojure.java.jdbc :as jdbc]))
 
 (fact "creates a connection pooled database"
-  (let [pool (db/db-for "org.sqlite.JDBC" "jdbc:sqlite::memory:" nil nil)]
-    (jdbc/query pool "SELECT 'foo' as bar") => [{:bar "foo"}]))
+  (let [pool (db/db-for "org.hsqldb.jdbc.JDBCDriver" "jdbc:hsqldb:mem:1" nil nil)]
+    (jdbc/query pool "SELECT 'foo' as bar FROM (VALUES(0))") => [{:bar "foo"}]))
 
 (defn mocked-db [db]
-  (jdbc/execute! db "CREATE TABLE tests (id VARCHAR(255) PRIMARY KEY, name VARCHAR(255))")
-  (jdbc/execute! db ["INSERT INTO tests VALUES (?, ?)" "foo" "bar"]))
+  (jdbc/execute! db "CREATE TABLE \"tests\" (\"id\" VARCHAR(255) PRIMARY KEY,
+                                             \"name\" VARCHAR(255))")
+  (jdbc/execute! db ["INSERT INTO \"tests\" VALUES (?, ?)" "foo" "bar"]))
 
 (facts "about mocked environment"
   (fact "defines a memory database, with pool size=1"
     (let [db (db/hsqldb-memory mocked-db)]
-      (jdbc/query db "SELECT * FROM tests") => [{:id "foo" :name "bar"}]))
+      (jdbc/query db "SELECT * FROM \"tests\"") => [{:id "foo" :name "bar"}]))
 
   (fact "allows definition of fake database with fake rows"
     (let [db (db/fake-rows mocked-db {:tests [{:id "quoz" :name "bar"}
                                               {:id "bar" :name "baz"}]})]
-      (jdbc/query db ["SELECT * FROM tests WHERE id=?" "quoz"])
+      (jdbc/query db ["SELECT * FROM \"tests\" WHERE \"id\"=?" "quoz"])
       => [{:id "quoz" :name "bar"}]))
 
   (fact "allow transactions"
     (let [db (db/fake-rows mocked-db {:tests [{:id "faa" :name "bar"}]})]
       (jdbc/with-db-transaction [db db]
-        (jdbc/execute! db ["UPDATE tests SET name=?" "test"])
+        (jdbc/execute! db ["UPDATE \"tests\" SET \"name\"=?" "test"])
 
         (fact "inside transaction, name is 'test'"
-          (jdbc/query db "SELECT * FROM tests WHERE id='faa'")
+          (jdbc/query db "SELECT * FROM \"tests\" WHERE \"id\"='faa'")
           => [{:id "faa" :name "test"}])
 
         (fact "transaction is rolled back" (jdbc/db-set-rollback-only! db) => irrelevant))
 
       (fact "outside transaction, name is 'bar'"
-        (jdbc/query db "SELECT * FROM tests WHERE id='faa'")
+        (jdbc/query db "SELECT * FROM \"tests\" WHERE \"id\"='faa'")
         => [{:id "faa" :name "bar"}])))
 
   (facts "about memory database"
@@ -62,10 +63,15 @@
       (jdbc/query (c2 {}) "SELECT * FROM foo") => []))
 
   (fact "will return a memory DB if mocked"
-    (let [constructor (db/gen-constructor (db/db-for "foo" "bar" "" ""))]
-      (jdbc/query (constructor {:mocked true
-                                :setup-db-fn mocked-db})
-                  "SELECT * FROM tests") => [{:id "foo" :name "bar"}])))
+    (let [c (db/gen-constructor (db/db-for "foo" "bar" "" ""))]
+      (jdbc/query (c {:mocked true :setup-db-fn mocked-db}) "SELECT * FROM \"tests\"")
+      => [{:id "foo" :name "bar"}]
+      (jdbc/execute! db/mocked-db "UPDATE \"tests\" SET \"name\"='arr'")
+      (jdbc/query (c {:mocked true}) "SELECT * FROM \"tests\"")
+      => [{:id "foo" :name "arr"}]
+      (jdbc/query ((db/gen-constructor (db/db-for "foo" "bar" "" ""))
+                   {:mocked true :setup-db-fn mocked-db}) "SELECT * FROM \"tests\"")
+      => [{:id "foo" :name "bar"}])))
 
 (facts "about healthcheck"
   (let [db (db/hsqldb-memory nil)]
