@@ -26,7 +26,6 @@
     (let [res (with-out-str (try (throw (ex-info "example" {:foo "BAR"}))
                               (catch Exception e
                                 (log/fatal mocked-logger "Error!" :ex e))))]
-      (println res)
       res => #(re-find #"FATAL: Error!\n\nCID: FOO" %)
       res => #(re-find #"EX: example" %)
       res => #(re-find #"DATA: \{:foo BAR\}" %))))
