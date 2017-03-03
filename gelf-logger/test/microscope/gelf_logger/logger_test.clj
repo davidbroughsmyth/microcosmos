@@ -1,9 +1,9 @@
-(ns gelf-logger.logger-test
+(ns microscope.gelf-logger.logger-test
   (:require [midje.sweet :refer :all]
             [microscope.logging :as log]
             [cheshire.core :as json]
             [gelfino.client :as gelf.client]
-            [gelf-logger.logger :as gelf]))
+            [microscope.gelf-logger.logger :as gelf]))
 
 (facts "will generate a logger to GELF"
   (let [logger (gelf/logger {:cid "FOO"})]

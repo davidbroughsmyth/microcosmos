@@ -1,4 +1,4 @@
-(ns gelf-logger.logger
+(ns microscope.gelf-logger.logger
   (:require [gelfino.client :as gelf]
             [environ.core :refer [env]]
             [cheshire.core :as cheshire]
