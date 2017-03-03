@@ -5,6 +5,7 @@
             [cheshire.core :as cheshire]))
 
 (def default-logger (log/default-logger-gen {}))
+(def mocked-logger (log/default-logger-gen {:mocked true :cid "FOO"}))
 (facts "when logging"
   (fact "logs to STDOUT in JSON format"
     (let [res (with-out-str (log/info default-logger "foo" :additional "data"))]
@@ -19,4 +20,13 @@
                                 (log/error default-logger "Error!" :ex e))))
           json-map (cheshire/decode res true)]
       json-map => (contains {:type "error" :message "Error!"})
-      (:ex json-map) => (contains {:cause "example" :data {:foo "BAR"}}))))
+      (:ex json-map) => (contains {:cause "example" :data {:foo "BAR"}})))
+
+  (fact "debug logger prettifies exceptions"
+    (let [res (with-out-str (try (throw (ex-info "example" {:foo "BAR"}))
+                              (catch Exception e
+                                (log/fatal mocked-logger "Error!" :ex e))))]
+      (println res)
+      res => #(re-find #"FATAL: Error!\n\nCID: FOO" %)
+      res => #(re-find #"EX: example" %)
+      res => #(re-find #"DATA: \{:foo BAR\}" %))))
