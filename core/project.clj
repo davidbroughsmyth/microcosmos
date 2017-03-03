@@ -1,4 +1,4 @@
-(defproject microscope "0.1.0"
+(defproject microscope "0.1.2"
   :description "Microservice architecture for Clojure"
   :url "https://github.com/acessocard/microscope"
   :license {:name "Eclipse Public License"
