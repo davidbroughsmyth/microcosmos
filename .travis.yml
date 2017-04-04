@@ -1,0 +1,7 @@
+language: clojure
+script:
+  - bash -c "cd core && lein midje && lein install"
+  - bash -c "cd crypt && lein midje"
+  - bash -c "cd rabbit && lein midje"
+  - bash -c "cd relational-db && lein midje"
+
