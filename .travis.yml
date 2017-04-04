@@ -1,4 +1,8 @@
-language: clojure
+sudo: required
+
+services:
+  - docker
+
 script:
   - bash -c "cd core && lein midje && lein install"
   - bash -c "cd crypt && lein midje"
