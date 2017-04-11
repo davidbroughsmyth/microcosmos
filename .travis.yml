@@ -1,14 +1,14 @@
-sudo: required
 language: clojure
-install: true
 
-services:
-  - docker
+jdk:
+  - oraclejdk8
 
 script:
-  - bash -c "cd core && lein midje && lein install"
-  - bash -c "cd crypt && lein midje"
-  - docker run -d -p5672:5672 rabbitmq
-  - bash -c "cd rabbit && lein midje"
-  - bash -c "cd relational-db && lein midje"
+  - lein midje
 
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: bash -c "lein change :deploy-repositories concat '[[\"releases\" {:url \"https://clojars.org/repo/\" :username :env :password :env}]]'  && lein deploy releases"
+    on:
+      tags: true
