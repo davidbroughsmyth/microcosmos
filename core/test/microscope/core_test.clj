@@ -113,7 +113,7 @@
     (components/mocked
      (a-function)
      (with-out-str
-       (io/send! @queue {:payload "Some msg"})) => #"ERROR: Message\n\n\{:cid"))
+       (io/send! @queue {:payload "Some msg"})) => #"ERROR: Message\n\nCID:"))
 
   (fact "allows to pass parameters to mocked env"
     (components/mocked {:initial-state-val :some-initial-state}
