@@ -20,9 +20,11 @@
       (cid-gen 8))))
 
 (defn params-for-generators [msg-data]
-  (let [cid (get-in msg-data [:meta :cid])
+  (let [meta (:meta msg-data)
+        cid (:cid meta)
         new-cid (generate-cid cid)]
-    {:cid new-cid}))
+    {:cid new-cid
+     :meta (dissoc meta :cid)}))
 
 (def ^:private get-generators identity)
 
