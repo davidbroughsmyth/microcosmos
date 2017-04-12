@@ -1,11 +1,11 @@
 # Microscope Project
+[![Build Status](https://travis-ci.org/acessocard/microscope.svg?branch=master)](https://travis-ci.org/acessocard/microscope)
 
-This is the default page for Microscope project. Microscope is a list of libraries to ease
-the use of Clojure with microservices. It is _not_ an opinated framework, nor it's a
-complete solution like Rails is for web, but most of the time it'll boostrap an
-application with relative ease of use.
+Microscope is a list of libraries to ease the use of Clojure with microservices. 
+It is _not_ an opinated framework, nor it's a complete solution like Rails is 
+for web, but most of the time it'll boostrap an application with relative ease of use.
 
-This repository contains the source code of Microscope (located in `core` directory). By
+This repository contains the source code of Microscope. By
 itself, it does little to nothing - we need some kind of implementation for IO. There's
 currently RabbitMQ implementation (it'll connect into a Rabbit queue, listen to it, and
 send to other queues), and there's a planned feature to use HTTP too.
