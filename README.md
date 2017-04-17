@@ -1,6 +1,7 @@
 # Microscope Project
 [![Build Status](https://travis-ci.org/acessocard/microscope.svg?branch=master)](https://travis-ci.org/acessocard/microscope)
 [![Clojars Project](https://img.shields.io/clojars/v/microscope.svg)](https://clojars.org/microscope)
+[![Dependencies Status](https://jarkeeper.com/acessocard/microscope/status.svg)](https://jarkeeper.com/acessocard/microscope)
 
 Microscope is a list of libraries to ease the use of Clojure with microservices.
 It is _not_ an opinated framework, nor it's a complete solution like Rails is
