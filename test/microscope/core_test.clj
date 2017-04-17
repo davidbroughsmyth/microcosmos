@@ -26,6 +26,16 @@
     (log [_ msg type data]
          (reset! log-output {:msg msg :type type :data (assoc data :cid cid)}))))
 
+(defrecord SomeQueue [params msgs]
+  io/IO
+  (listen [_ function]
+          (add-watch msgs :watch (fn [_ _ _ actual]
+                                   (function actual))))
+  (send! [_ _])
+  (ack! [_ _])
+  (reject! [_ _ _])
+  (log-message [_ _ _]))
+
 (facts "when subscribing for new messages"
   (with-redefs [future/pool (fut-pool/immediate-future-pool)]
     (let [last-msg (atom nil)
@@ -46,6 +56,18 @@
         (subscribe :queue (fn [f _] (future/map #(Integer/parseInt %) f)))
         (io/send! component "ten")
         @last-msg => {:reject "ten"})
+
+      (fact "passes meta and CID from message to IO implementations"
+        (let [msgs (atom nil)
+              p (promise)
+              queue-fn (fn [params] (->SomeQueue params msgs))
+              subs (components/subscribe-with :queue queue-fn)]
+
+          (subs :queue (fn [_ {:keys [queue]}] (future/just (deliver p (:params queue)))))
+          (swap! msgs (constantly {:meta {:im-so "META!"
+                                          :cid "FOO"}}))
+          (deref p 1000 :TIMEOUT) => (just {:meta {:im-so "META!"}
+                                            :cid #"FOO.*"})))
 
       (fact "logs CID when using default logger"
         (do
