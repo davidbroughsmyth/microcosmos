@@ -58,11 +58,14 @@ Type can be :info, :warning, :error or :fatal"))
 (generators/add-encoder java.lang.Class generators/encode-str)
 (generators/add-encoder java.lang.StackTraceElement
                         (fn [ste writer]
-                          (generators/encode-seq (stack->vector ste) writer)))
+                          (generators/encode-str (clojure.string/join " " (stack->vector ste)) writer)))
 
 (generators/add-encoder java.lang.Exception
-                        (fn [ex writer]
-                          (generators/encode-map (Throwable->map ex) writer)))
+  (fn [ex writer]
+    (let [ex (Throwable->map ex)
+      normalized (update ex :trace #(->> % (str/join "\n") demunge))]
+      (generators/encode-map normalized writer))))
+
 
 (defn default-logger-gen [{:keys [cid mocked]}]
   (if mocked

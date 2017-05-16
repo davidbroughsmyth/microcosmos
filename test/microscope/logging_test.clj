@@ -15,17 +15,13 @@
                                      :cid nil}))
 
   (fact "logs exception"
-    (let [res (with-out-str (try (throw (ex-info "example" {:foo "BAR"}))
-                              (catch Exception e
-                                (log/error default-logger "Error!" :ex e))))
+    (let [res (with-out-str (log/error default-logger "Error!" :ex (ex-info "example" {:foo "BAR"})))
           json-map (cheshire/decode res true)]
       json-map => (contains {:type "error" :message "Error!"})
-      (:ex json-map) => (contains {:cause "example" :data {:foo "BAR"}})))
+      (:ex json-map) => (contains {:cause "example" :data {:foo "BAR"} :trace #(string? %)})))
 
   (fact "debug logger prettifies exceptions"
-    (let [res (with-out-str (try (throw (ex-info "example" {:foo "BAR"}))
-                              (catch Exception e
-                                (log/fatal mocked-logger "Error!" :ex e))))]
+    (let [res (with-out-str (log/fatal mocked-logger "Error!" :ex (ex-info "example" {:foo "BAR"})))]
       res => #(re-find #"FATAL: Error!\n\nCID: FOO" %)
       res => #(re-find #"EX: example" %)
       res => #(re-find #"DATA: \{:foo BAR\}" %))))
