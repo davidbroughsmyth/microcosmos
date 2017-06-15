@@ -4,14 +4,14 @@
             [cheshire.core :as json]
             [clojure.string :as str]))
 
-(defmulti serialize-class #(type %))
-(defmethod serialize-class clojure.lang.IFn [f] (clj-main/demunge (str f)))
-(defmethod serialize-class clojure.lang.ARef [f] (with-out-str (prn f)))
-(defmethod serialize-class :default [obj] (str obj))
+(defmulti serialize-type #(type %))
+(defmethod serialize-type clojure.lang.IFn [f] (clj-main/demunge (str f)))
+(defmethod serialize-type clojure.lang.ARef [f] (with-out-str (prn f)))
+(defmethod serialize-type :default [obj] (str obj))
 
 (generators/add-encoder Object
                         (fn [obj writer]
-                          (generators/encode-str (serialize-class obj) writer)))
+                          (generators/encode-str (serialize-type obj) writer)))
 
 (defprotocol IO
   (listen [component function]

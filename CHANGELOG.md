@@ -3,6 +3,9 @@
 ## 0.1.5
 ### Bugfix
 * Adds serializer to Throwable, not Exceptions
+* Adds a multimethod on microscope.io - `serialize-type` - that allows to serialize
+  specific types, falling back to just generating a string with `str`. Fixes
+  serializes message
 
 ## 0.1.4
 ### Changes
