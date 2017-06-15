@@ -37,7 +37,7 @@ Type can be :info, :warning, :error or :fatal"))
 
 (defn- print-kv [data]
   (doseq [[k v] data]
-    (if (instance? Exception v)
+    (if (instance? Throwable v)
       (let [ex (Throwable->map v)
             stack (mapv stack->vector (:trace ex))]
         (println (str (str/upper-case (name k)) ":") (:cause ex))
@@ -60,10 +60,10 @@ Type can be :info, :warning, :error or :fatal"))
                         (fn [ste writer]
                           (generators/encode-str (clojure.string/join " " (stack->vector ste)) writer)))
 
-(generators/add-encoder java.lang.Exception
+(generators/add-encoder Throwable
   (fn [ex writer]
     (let [ex (Throwable->map ex)
-      normalized (update ex :trace #(->> % (str/join "\n") demunge))]
+          normalized (update ex :trace #(->> % (str/join "\n") demunge))]
       (generators/encode-map normalized writer))))
 
 

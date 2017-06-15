@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.1.5
+### Bugfix
+* Adds serializer to Throwable, not Exceptions
+
 ## 0.1.4
 ### Changes
 * Change log output format from vector of vectors to string because Elasticsearch
