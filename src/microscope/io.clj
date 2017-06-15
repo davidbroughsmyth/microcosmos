@@ -1,6 +1,17 @@
 (ns microscope.io
-  (:require [cheshire.core :as json]
+  (:require [clojure.main :as clj-main]
+            [cheshire.generate :as generators]
+            [cheshire.core :as json]
             [clojure.string :as str]))
+
+(defmulti serialize-type #(type %))
+(defmethod serialize-type clojure.lang.IFn [f] (clj-main/demunge (str f)))
+(defmethod serialize-type clojure.lang.ARef [f] (with-out-str (prn f)))
+(defmethod serialize-type :default [obj] (str obj))
+
+(generators/add-encoder Object
+                        (fn [obj writer]
+                          (generators/encode-str (serialize-type obj) writer)))
 
 (defprotocol IO
   (listen [component function]
