@@ -40,7 +40,7 @@
                      (log/fatal logger "Uncaught Exception" :ex ex)
                      (reject! io-component data ex))]
     (->> (future/execute data)
-         (future/on-success #(io/log-message io-component logger %))
+         (future/intercept #(io/log-message io-component logger %))
          (#(callback % components))
          (future/on-success ack-msg)
          (future/on-failure reject-msg))))
