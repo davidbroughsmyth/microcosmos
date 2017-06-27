@@ -1,6 +1,8 @@
 # Change Log
 
-## 0.1.5
+## 0.2.0
+### Changes
+* Pass logger generator to components
 ### Bugfix
 * Adds serializer to Throwable, not Exceptions
 * Adds a multimethod on microscope.io - `serialize-type` - that allows to serialize
