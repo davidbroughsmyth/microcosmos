@@ -1,6 +1,5 @@
 (ns microscope.logging-test
   (:require [midje.sweet :refer :all]
-            [microscope.core :as components]
             [microscope.logging :as log]
             [cheshire.core :as cheshire]))
 

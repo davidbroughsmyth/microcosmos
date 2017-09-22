@@ -1,13 +1,11 @@
 (ns microscope.healthcheck
-  (:require [microscope.future :as future]
-            [microscope.io :as io]
-            [cheshire.core :as json]
+  (:require [cheshire.core :as json]
             [finagle-clojure.builder.server :as builder-server]
-            [finagle-clojure.service :as service]
             [finagle-clojure.http.message :as msg]
             [finagle-clojure.http.server :as http-server]
-            [finagle-clojure.http.builder.codec :as http-codec]
-            [finagle-clojure.http.client :as http-client]))
+            [finagle-clojure.service :as service]
+            [microscope.future :as future]
+            [microscope.io :as io]))
 
 (defprotocol Healthcheck
   (unhealthy? [component]
@@ -44,19 +42,20 @@ reasons why that component is marked as unhealthy"))
    (let [p (atom nil)]
      (reify io/IO
        (listen [_ function]
-               (let [server (http-server/serve ":8081" (service/mk [req]
-                                                         (reset! p (promise))
-                                                         (function {})
-                                                         @@p))]
-                 (reset! http-server server)))
+         (let [server (http-server/serve ":8081" (service/mk [_]
+                                                   (reset! p (promise))
+                                                   (function {})
+                                                   @@p))]
+           (reset! http-server server)))
        (send! [_ {:keys [payload meta]}]
-              (deliver @p
-                       (future/just (-> (msg/response (or (:status-code meta) 200))
-                                        (msg/set-content-string (json/encode payload))))))
+         (deliver @p (-> (:status-code meta)
+                         (or 200)
+                         (msg/response)
+                         (msg/set-content-string (json/encode payload))
+                         future/just)))
        (ack! [_ _])
        (reject! [_ _ _]
-                (deliver @p
-                         (future/just (-> (msg/response 404)))))
+          (deliver @p (future/just (msg/response 404))))
        (log-message [_ _ _])))))
 
 (defn health-checker-gen [params]

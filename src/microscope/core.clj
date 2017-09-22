@@ -107,7 +107,7 @@ are the mocked microscope. Other parameters are dependend of each component impl
   (let [possible-params (first args)
         params (cond-> {:mocked true}
                        (map? possible-params) (merge possible-params))
-        mocked-comps (->> (get params :mocks {}))]
+        mocked-comps (get params :mocks {})]
     `(let [function# ~params-for-generators]
        (with-redefs [params-for-generators #(merge (function# %) ~params)
                      get-generators #(merge % ~mocked-comps)

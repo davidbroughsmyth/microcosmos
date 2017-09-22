@@ -47,7 +47,7 @@
 
 (facts "when listening to futures"
   (let [success (future/just 10)
-        failure (future/execute (throw (ex-info {:some "error"})))]
+        failure (future/execute (throw (ex-info "error" {:some "error"})))]
     (fact "listens to success"
       (with-promise
         (future/on-success (fn [_] (deliver promise :success)) success)) => :success)

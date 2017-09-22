@@ -1,4 +1,5 @@
 (ns microscope.core-test
+  (:refer-clojure :exclude [subs])
   (:require [midje.sweet :refer :all]
             [microscope.core :as components]
             [microscope.io :as io]
@@ -104,8 +105,7 @@
         => #"java\.lang\.Integer\.parseInt \(Integer\.java:580\)\n"))))
 
 (fact "generates a healthcheck HTTP entrypoint"
-  (let [last-msg (atom nil)
-        unhealthy-component (reify health/Healthcheck (unhealthy? [_] {:yes "I am"}))
+  (let [unhealthy-component (reify health/Healthcheck (unhealthy? [_] {:yes "I am"}))
         subscribe (components/subscribe-with :unhealthy (constantly unhealthy-component))
         http (http-client/service ":8081")
         _ (subscribe :healthcheck health/handle-healthcheck)
