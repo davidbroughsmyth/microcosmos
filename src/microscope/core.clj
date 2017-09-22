@@ -1,5 +1,6 @@
 (ns microscope.core
-  (:require [microscope.future :as future]
+  (:require [clojure.string :as str]
+            [microscope.future :as future]
             [microscope.logging :as log]
             [microscope.io :as io]
             [finagle-clojure.future-pool :as fut-pool]
@@ -28,6 +29,16 @@
 
 (def ^:private get-generators identity)
 
+(defn- log-exception [logger ex]
+  (let [parsed (log/parse-exception ex)
+        trace (->> parsed :trace
+                   (map (fn [[class method file line]]
+                          (str class "." method " (" file ":" line ")")))
+                   (str/join "\n"))]
+    (log/fatal logger "Uncaught Exception"
+               :exception (io/serialize-msg (dissoc parsed :trace))
+               :backtrace trace)))
+
 (defn- handler-for-component [components-generators io-component callback data]
   (let [params (params-for-generators data)
         components (->> components-generators
@@ -37,7 +48,7 @@
         logger (:logger components)
         ack-msg (fn [_] (ack! io-component data))
         reject-msg (fn [ex]
-                     (log/fatal logger "Uncaught Exception" :ex ex)
+                     (log-exception logger ex)
                      (reject! io-component data ex))]
     (->> (future/execute data)
          (future/intercept #(io/log-message io-component logger %))

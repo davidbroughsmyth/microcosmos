@@ -60,7 +60,9 @@ Type can be :info, :warning, :error or :fatal"))
       (println "CID:" cid)
       (print-kv data))))
 
-(generators/add-encoder java.lang.Class generators/encode-str)
+(generators/add-encoder java.lang.Class
+                        (fn [class writer]
+                          (generators/encode-str (.getName class) writer)))
 (generators/add-encoder java.lang.StackTraceElement
                         (fn [ste writer]
                           (generators/encode-str (clojure.string/join " " (stack->vector ste)) writer)))

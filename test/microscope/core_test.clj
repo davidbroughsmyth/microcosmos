@@ -89,8 +89,19 @@
       (fact "logs an error using logger and CID to correlate things"
         (subscribe :queue (fn [f _] (future/map #(Integer/parseInt %) f)))
         (io/send! component "ten")
-        @log-output => (contains {:type :fatal, :data (contains {:cid string?
-                                                                 :ex anything})})))))
+        (:type @log-output) => :fatal
+        (:data @log-output) => (contains {:cid string?
+                                          :exception string?
+                                          :backtrace string?})
+        (-> @log-output :data :exception io/deserialize-msg)
+        => {:cause "For input string: \"ten\""
+            :via [{:type "java.lang.NumberFormatException"
+                   :message "For input string: \"ten\""
+                   :at ["java.lang.NumberFormatException" "forInputString"
+                        "NumberFormatException.java" 65]}]}
+
+        (-> @log-output :data :backtrace)
+        => #"java\.lang\.Integer\.parseInt \(Integer\.java:580\)\n"))))
 
 (fact "generates a healthcheck HTTP entrypoint"
   (let [last-msg (atom nil)
