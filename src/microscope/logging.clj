@@ -2,7 +2,8 @@
   (:require [cheshire.core :as cheshire]
             [cheshire.generate :as generators]
             [clojure.repl :refer [demunge]]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.walk :as walk]))
 
 (defprotocol Log
   (log [_ message type data]
@@ -22,7 +23,7 @@ Type can be :info, :warning, :error or :fatal"))
 
 (defn- stack->vector [ste]
   [(demunge (.getClassName ste))
-   (.getMethodName ste)
+   (demunge (.getMethodName ste))
    (.getFileName ste)
    (.getLineNumber ste)])
 
@@ -34,6 +35,10 @@ Type can be :info, :warning, :error or :fatal"))
             (format (str "%" class-size "s" "  %-" method-size "s  %s:%d")
                     class method file line))
           stack)))
+
+(defn parse-exception [ex]
+  (walk/postwalk #(cond-> % (instance? StackTraceElement %) stack->vector)
+                 (Throwable->map ex)))
 
 (defn- print-kv [data]
   (doseq [[k v] data]
@@ -55,17 +60,18 @@ Type can be :info, :warning, :error or :fatal"))
       (println "CID:" cid)
       (print-kv data))))
 
-(generators/add-encoder java.lang.Class generators/encode-str)
+(generators/add-encoder java.lang.Class
+                        (fn [class writer]
+                          (generators/encode-str (.getName class) writer)))
 (generators/add-encoder java.lang.StackTraceElement
                         (fn [ste writer]
                           (generators/encode-str (clojure.string/join " " (stack->vector ste)) writer)))
 
 (generators/add-encoder Throwable
   (fn [ex writer]
-    (let [ex (Throwable->map ex)
-          normalized (update ex :trace #(->> % (str/join "\n") demunge))]
-      (generators/encode-map normalized writer))))
-
+    (let [parsed (parse-exception ex)
+          normalized (update parsed :trace #(map (partial str/join "\n") %))]
+      (generators/encode-str (cheshire/encode normalized) writer))))
 
 (defn default-logger-gen [{:keys [cid mocked]}]
   (if mocked

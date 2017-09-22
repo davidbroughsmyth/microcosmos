@@ -3,6 +3,10 @@
 ## 0.2.0
 ### Changes
 * Pass logger generator to components
+* When logging exceptions, format is a little different: will always log in two keys:
+`:exception` and `:backtrace`, both strings (fix bugs with ElasticSearch, conforms to
+a simple schema)
+
 ### Bugfix
 * Adds serializer to Throwable, not Exceptions
 * Adds a multimethod on microscope.io - `serialize-type` - that allows to serialize
