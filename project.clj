@@ -31,6 +31,6 @@
                         :figwheel true
                         :compiler {:output-to "target/main.js"
                                    :output-dir "target/js"
-                                   :main microscope.future-test
+                                   :main microscope.all-tests
                                    :optimizations :none
                                    :target :nodejs}}]})
