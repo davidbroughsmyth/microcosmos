@@ -36,8 +36,11 @@
 (defn on-finish [fun & objs]
   (fut-finagle/ensure* (fut-finagle/collect objs) #(do (fun) nil)))
 
+(defn execute* [f]
+  (fut-pool/run* pool f))
+
 (defmacro execute [ & args]
-  `(fut-pool/run* pool ~(cons `fn (cons [] args))))
+  `(execute* (fn [] ~@args)))
 
 (defn map-fork [fun & funs]
   (let [future (last funs)
