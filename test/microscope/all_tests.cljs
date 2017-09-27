@@ -1,2 +1,6 @@
 (ns microscope.all-tests
-  (:require [microscope.future-test]))
+  (:require [cljs.nodejs :as nodejs]
+            [microscope.future-test]
+            [microscope.io-test]))
+
+(nodejs/enable-util-print!)
