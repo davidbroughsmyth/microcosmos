@@ -19,6 +19,10 @@ Type can be :info, :warning, :error or :fatal"))
         (->> (.stringify js/JSON))
         println)))
 
+(defn parse-exception [ex]
+  {:cause (.-message ex)
+   :trace (str/split-lines (.-stack ex))})
+
 (defn- print-kv [data]
   (doseq [[k v] data]
     (if (instance? js/Error v)

@@ -15,8 +15,6 @@
 (deftest logging
   (testing "logs to STDOUT in JSON format"
     (let [res (with-out-str (log/info default-logger "foo" :additional "data"))]
-      (println res)
-      (def r res)
       (is (= {:type "info"
               :message "foo"
               :additional "data"
@@ -24,6 +22,11 @@
              (decode-json res))))))
 
 (deftest exception-logging
+  (testing "parses exception code"
+    (let [ex (log/parse-exception (ex-info "example" {:foo "BAR"}))]
+      (is (= "example" (:cause ex)))
+      (is (vector? (:trace ex)))))
+
   (testing "debug logger prettifies exceptions"
     (let [res (with-out-str (log/fatal mocked-logger "Error!" :ex (ex-info "example" {:foo "BAR"})))]
       (is (re-find #"FATAL: Error!\n\nCID: FOO" res))
