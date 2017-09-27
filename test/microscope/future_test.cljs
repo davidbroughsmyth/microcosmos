@@ -1,9 +1,6 @@
 (ns microscope.future-test
-  (:require [cljs.nodejs :as nodejs]
-            [clojure.test :refer-macros [deftest is testing run-tests async]]
+  (:require [clojure.test :refer-macros [deftest is testing run-tests async]]
             [microscope.future :as future]))
-
-(nodejs/enable-util-print!)
 
 (deftest just-future
   (async done
