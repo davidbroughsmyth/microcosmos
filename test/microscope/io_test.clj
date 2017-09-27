@@ -19,5 +19,3 @@
 
 (fact "de-serializes JSON in a clojure way"
   (io/deserialize-msg "{\"foo_one\":10}") => {:foo-one 10})
-
-(type (atom nil))
