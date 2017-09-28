@@ -25,6 +25,7 @@
                                    :optimizations :simple
                                    :hashbang false
                                    :output-wrapper true
+                                   :pretty-print true
                                    :target :nodejs}}
                        {:source-paths ["src" "test"]
                         :id "dev"
