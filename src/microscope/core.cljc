@@ -1,4 +1,5 @@
 (ns microscope.core
+  #?(:cljs (:require-macros [microscope.future :as future]))
   (:require [clojure.string :as str]
             [microscope.future :as future]
             [microscope.logging :as log]
