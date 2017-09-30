@@ -7,3 +7,4 @@
 (require 'microscope.logging-test)
 (require 'microscope.io-test)
 (require 'microscope.env-test)
+(require 'microscope.healthcheck-test)

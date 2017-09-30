@@ -7,12 +7,20 @@
               "Checks if component is unhealthy. If returning a map, shows the
 reasons why that component is marked as unhealthy"))
 
+(defn- wrap-in-promise [[name component]]
+  (let [unhealthy (future/just (unhealthy? component))]
+    (-> unhealthy
+        (.then #(vector name %))
+        (.catch #(vector name (or % "failure found in healthcheck"))))))
+
 (defn check [components-map]
   (let [health-map (->> components-map
-                       (filter #(satisfies? Healthcheck (second %)))
-                       (map (fn [[name component]] [name (unhealthy? component)])))
-        healthy? (->> health-map (some second) not)]
-    {:result healthy? :details (into {} health-map)}))
+                        (filter #(satisfies? Healthcheck (second %)))
+                        (map wrap-in-promise)
+                        future/join)]
+    (. health-map then
+      #(let [healthy? (->> % (some second) not)]
+         {:result healthy? :details (into {} %)}))))
 
 ; ; FIXME: This is TEMPORARY!
 ; ; Until we have a REAL HTTP server component, we'll be using
