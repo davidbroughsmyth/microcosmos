@@ -1,4 +1,5 @@
 (ns microscope.future-test
+  (:require-macros [microscope.future :as future])
   (:require [clojure.test :refer-macros [deftest is testing run-tests async]]
             [microscope.future :as future]))
 
@@ -47,7 +48,6 @@
                   (is (= % [10 20]))
                   (done)))))))
 
-
 (deftest listen-to-future-results
   (async done
     (let [success (future/just 10)
@@ -64,6 +64,15 @@
                             (is (= @success-a :success))
                             (is (= @failure-a :fail))
                             (done))
-                        success failure))))
+                        success
+                        failure))))
+
+(deftest on-success-catches-exception
+  (async done
+    (->> (future/just 10)
+         (future/on-success #(throw "Foo"))
+         (future/intercept #(do
+                              (is (= 10 %))
+                              (done))))))
 
 (run-tests)

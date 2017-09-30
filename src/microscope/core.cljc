@@ -114,6 +114,3 @@ are the mocked microscope. Other parameters are dependend of each component impl
                      get-generators #(merge % ~mocked-comps)
                      future/pool (fut-pool/immediate-future-pool)]
          ~(cons `do args)))))
-
-#?(:cljs (aset js/module "exports" #js {:subscribeWith subscribe-with
-                                        :send io/send!}))

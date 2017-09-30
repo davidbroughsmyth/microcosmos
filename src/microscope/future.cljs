@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [map]))
 
 (def join #(.all js/Promise %))
-(defn just [value] (.resolve js/Promise value))
+(defn just [value] (. js/Promise resolve value))
 
 (defn execute* [f]
   (js/Promise. (fn [resolve] (resolve (f)))))
@@ -16,13 +16,17 @@
     1 (map #(do (fun %) %) (first objs))
     (apply map (fn [ & args] (apply fun args) args) objs)))
 
-(def on-success #'intercept)
+(defn on-success [fun & objs]
+  (apply intercept (fn [ & args] (try
+                                   (apply fun args)
+                                   (catch :default e :foo)))
+    objs))
 
 (defn on-failure [fun & objs]
   (.catch (join objs) fun))
 
 (defn on-finish [fun & objs]
-  (let [future (join objs)]
-    (doto future
-          (.then #(fun))
-          (.catch #(fun)))))
+  (->> objs
+       join
+       (on-success #(fun))
+       (on-failure #(fun))))
