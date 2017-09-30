@@ -3,8 +3,8 @@
   (:require [clojure.string :as str]
             [microscope.future :as future]
             [microscope.logging :as log]
-            [microscope.io :as io]))
-            ; [microscope.healthcheck :as health]))
+            [microscope.io :as io]
+            [microscope.healthcheck :as health]))
 
 (def listen io/listen)
 (def send! io/send!)
@@ -84,8 +84,8 @@ or failure"
   [ & {:as components-generators}]
   (let [components-generators (-> components-generators
                                   get-generators
-                                  (update :logger #(or % log/default-logger-gen)))
-                                  ; (update :healthcheck #(or % health/health-checker-gen)))
+                                  (update :logger #(or % log/default-logger-gen))
+                                  (update :healthcheck #(or % health/health-checker-gen)))
         logger-generator (:logger components-generators)]
     (fn [comp-to-listen callback]
         (let [generator (get components-generators comp-to-listen)
