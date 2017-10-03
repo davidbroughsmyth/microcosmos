@@ -12,7 +12,7 @@
 (def reject! io/reject!)
 
 (defn generate-cid [old-cid]
-  (let [upcase-chars (map char (range (int \A) (inc (int \Z))))
+  (let [upcase-chars (map char (range 65 90)) ; 65 = A, 90 = Z
         digits (range 10)
         alfa-digits (cycle (map str (concat upcase-chars digits)))
         cid-gen #(apply str (take % (random-sample 0.02 alfa-digits)))]
