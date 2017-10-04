@@ -40,7 +40,8 @@
                :backtrace trace)))
 
 (defn- handler-for-component [components-generators io-component callback data]
-  (let [params (params-for-generators data)
+  (let [logger-generator (:logger components-generators)
+        params (assoc (params-for-generators data) :logger-gen logger-generator)
         components (->> components-generators
                         get-generators
                         (map (fn [[k generator]] [k (generator params)]))
