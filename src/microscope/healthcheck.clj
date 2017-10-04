@@ -5,7 +5,8 @@
             [finagle-clojure.http.server :as http-server]
             [finagle-clojure.service :as service]
             [microscope.future :as future]
-            [microscope.io :as io]))
+            [microscope.io :as io]
+            [microscope.logging :as log]))
 
 (defprotocol Healthcheck
   (unhealthy? [component]
@@ -14,8 +15,8 @@ reasons why that component is marked as unhealthy"))
 
 (defn check [components-map]
   (let [health-map (->> components-map
-                       (filter #(satisfies? Healthcheck (second %)))
-                       (map (fn [[name component]] [name (unhealthy? component)])))
+                        (filter #(satisfies? Healthcheck (second %)))
+                        (map (fn [[name component]] [name (unhealthy? component)])))
         healthy? (->> health-map (some second) not)]
     {:result healthy? :details (into {} health-map)}))
 
@@ -37,32 +38,36 @@ reasons why that component is marked as unhealthy"))
     (builder-server/close! server)
     (reset! http-server nil)))
 
-(def default-health-checker
-  (delay
-   (let [p (atom nil)]
-     (reify io/IO
-       (listen [_ function]
-         (let [server (http-server/serve ":8081" (service/mk [_]
-                                                   (reset! p (promise))
-                                                   (function {})
-                                                   @@p))]
-           (reset! http-server server)))
-       (send! [_ {:keys [payload meta]}]
-         (deliver @p (-> (:status-code meta)
-                         (or 200)
-                         (msg/response)
-                         (msg/set-content-string (json/encode payload))
-                         future/just)))
-       (ack! [_ _])
-       (reject! [_ _ _]
-          (deliver @p (future/just (msg/response 404))))
-       (log-message [_ _ _])))))
+(def ^:private health-promise-atom (atom nil))
+(defn ^:private generate-default-health-checker [logger]
+  (reify io/IO
+    (listen [_ function]
+            (let [server (http-server/serve ":8081" (service/mk [req]
+                                                                (swap! health-promise-atom
+                                                                       (constantly (promise)))
+                                                                (function {})
+                                                                @@health-promise-atom))]
+              (reset! http-server server)))
+    (send! [_ {:keys [payload meta]}]
+           (deliver @health-promise-atom
+                    (future/just (-> (msg/response (or (:status-code meta) 200))
+                                     (msg/set-content-string (json/encode payload)))))
+           (when-not (:result payload)
+             (log/fatal (logger {:cid "HEALTHCHECK"}) "Healthcheck failed"
+                        :additional-info (json/encode (:details payload)))))
+    (ack! [_ _])
+    (reject! [_ _ _]
+             (deliver @health-promise-atom
+                      (future/just (-> (msg/response 404)))))
+    (log-message [_ _ _])))
 
-(defn health-checker-gen [params]
-  (if (:mocked params)
+(def default-health-checker (memoize generate-default-health-checker))
+
+(defn health-checker-gen [{:keys [mocked logger-gen] :as f}]
+  (if mocked
     (reify io/IO
       (listen [_ _])
       (send! [_ _])
       (ack! [_ _])
       (reject! [_ _ _]))
-    @default-health-checker))
+    (default-health-checker logger-gen)))

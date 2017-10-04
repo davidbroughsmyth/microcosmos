@@ -1,15 +1,11 @@
 (ns microscope.core-test
   (:refer-clojure :exclude [subs])
-  (:require [midje.sweet :refer :all]
+  (:require [finagle-clojure.future-pool :as fut-pool]
             [microscope.core :as components]
-            [microscope.io :as io]
             [microscope.future :as future]
-            [finagle-clojure.future-pool :as fut-pool]
+            [microscope.io :as io]
             [microscope.logging :as log]
-            [microscope.healthcheck :as health]
-            [finagle-clojure.http.client :as http-client]
-            [finagle-clojure.http.message :as msg]
-            [cheshire.core :as json]))
+            [midje.sweet :refer :all]))
 
 (defn fake-component [other]
   (let [fn (atom nil)]
@@ -58,7 +54,7 @@
         (io/send! component "ten")
         @last-msg => {:reject "ten"})
 
-      (fact "passes meta and CID from message to IO implementations"
+      (fact "passes meta, logger, and CID from message to IO implementations"
         (let [msgs (atom nil)
               p (promise)
               queue-fn (fn [params] (->SomeQueue params msgs))
@@ -68,7 +64,8 @@
           (swap! msgs (constantly {:meta {:im-so "META!"
                                           :cid "FOO"}}))
           (deref p 1000 :TIMEOUT) => (just {:meta {:im-so "META!"}
-                                            :cid #"FOO.*"})))
+                                            :cid #"FOO.*"
+                                            :logger-gen log/default-logger-gen})))
 
       (fact "logs CID when using default logger"
         (do
@@ -103,20 +100,6 @@
 
         (-> @log-output :data :backtrace)
         => #"java\.lang\.Integer\.parseInt \(Integer\.java:580\)\n"))))
-
-(fact "generates a healthcheck HTTP entrypoint"
-  (let [unhealthy-component (reify health/Healthcheck (unhealthy? [_] {:yes "I am"}))
-        subscribe (components/subscribe-with :unhealthy (constantly unhealthy-component))
-        http (http-client/service ":8081")
-        _ (subscribe :healthcheck health/handle-healthcheck)
-        res (-> http
-                (finagle-clojure.service/apply (msg/request "/"))
-                finagle-clojure.futures/await)]
-    (-> res msg/content-string (json/decode true)) => {:result false
-                                                       :details {:unhealthy {:yes "I am"}}}
-    (msg/status-code res) => 503)
-  (background
-    (after :facts (health/stop-health-checker!))))
 
 ; Mocking section
 (def queue (atom nil))
