@@ -111,8 +111,11 @@
       (reset! queue
               (reify io/IO
                 (listen [component function]
-                  (add-watch atom :obs (fn [_ _ _ value]
-                                         (function value))))
+                  (Promise. (fn [resolve reject]
+                              (add-watch atom :obs
+                                         (fn [_ _ _ value]
+                                           (function (assoc value :meta {:resolve resolve
+                                                                         :reject reject})))))))
                (send! [component message] (swap! atom (constantly message)))
                (ack! [component param])
                (reject! [component param ex])
