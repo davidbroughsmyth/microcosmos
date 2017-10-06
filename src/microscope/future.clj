@@ -39,6 +39,11 @@
 (defn execute* [f]
   (fut-pool/run* pool f))
 
+; For mocked components
+(defn sync-execute [f]
+  (let [pool (fut-pool/immediate-future-pool)]
+    (fut-pool/run* pool f)))
+
 (defmacro execute [ & args]
   `(execute* (fn [] ~@args)))
 

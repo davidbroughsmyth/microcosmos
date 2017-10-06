@@ -7,6 +7,10 @@
 (defn execute* [f]
   (js/Promise. (fn [resolve] (resolve (f)))))
 
+; For mocked components
+(defn sync-execute [f]
+  (js/Promise. (fn [resolve] (resolve (f)))))
+
 (defn map [fun & objs]
   (.then (join objs) #(apply fun %)))
 

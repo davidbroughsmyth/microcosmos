@@ -20,12 +20,14 @@
       (str old-cid "." (cid-gen 5))
       (cid-gen 8))))
 
-(defn params-for-generators [msg-data]
+(defn params-for-generators* [msg-data]
   (let [meta (:meta msg-data)
         cid (:cid meta)
         new-cid (generate-cid cid)]
     {:cid new-cid
      :meta (dissoc meta :cid)}))
+
+(def params-for-generators params-for-generators*)
 
 (def ^:private get-generators identity)
 
@@ -97,7 +99,6 @@ or failure"
                                    callback)]
           (listen component callback-fn)))))
 
-#?(:clj (require '[finagle-clojure.future-pool :as fut-pool]))
 (defmacro mocked
   "Generates a mocked environment, for tests. In this mode, `db` is set to sqlite,
 memory only, RabbitMQ is disabled and code is used to coordinate between messages, etc.
@@ -110,8 +111,7 @@ are the mocked microscope. Other parameters are dependend of each component impl
         params (cond-> {:mocked true}
                        (map? possible-params) (merge possible-params))
         mocked-comps (get params :mocks {})]
-    `(let [function# ~params-for-generators]
-       (with-redefs [params-for-generators #(merge (function# %) ~params)
-                     get-generators #(merge % ~mocked-comps)
-                     future/pool (fut-pool/immediate-future-pool)]
-         ~(cons `do args)))))
+    `(with-redefs [params-for-generators #(merge (params-for-generators* %) ~params)
+                   get-generators #(merge % ~mocked-comps)
+                   future/execute* future/sync-execute]
+       ~@args)))
