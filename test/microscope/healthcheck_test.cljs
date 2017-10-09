@@ -1,5 +1,6 @@
 (ns microscope.healthcheck-test
   (:require [clojure.test :refer-macros [deftest is testing run-tests async]]
+            [microscope.core :as components]
             [microscope.healthcheck :as health]))
 
 (def unhealthy-async-component
@@ -46,5 +47,30 @@
                                               :alive nil}})
                   %)
               (done)))))
+
+(def http (js/require "http"))
+(defn get-json [fun]
+  (let [output (atom "")
+        json (atom nil)
+        req (. http (request #js {:host "localhost" :port 808 :path "/health" :method "GET"}
+                            (fn [response]
+                              (doto response
+                                    (.on "data" #(swap! output str %))
+                                    (.on "end" #(reset! json (->> @output
+                                                                  (.parse js/JSON)
+                                                                  (js->clj)
+                                                                  (assoc :status-code (.-statusCode %))
+                                                                  fun)))
+                                    (.on "error" println)))))]
+    (.end req)))
+
+(deftest gen-http-entrypoint
+  (async done
+    (let [subscribe (components/subscribe-with :healthy (constantly healthy-component))]
+      (subscribe :healthcheck health/handle-healthcheck)
+      (get-json #(do
+                   (is (= {:result true :details {:healthy nil} :status-code 200}
+                          %))
+                   (done))))))
 
 (run-tests)
