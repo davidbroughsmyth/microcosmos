@@ -9,5 +9,5 @@
 
   (testing "when an env variable is present"
     (aset (.-env js/process) "RABBIT_PASSWORD" "secret rabbit password")
-    (is  (= "secret rabbit passworda"
+    (is  (= "secret rabbit password"
             (secret-or-env :rabbit-password "test/fixtures/secrets")))))
