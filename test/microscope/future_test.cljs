@@ -74,5 +74,3 @@
          (future/intercept #(do
                               (is (= 10 %))
                               (done))))))
-
-(run-tests)

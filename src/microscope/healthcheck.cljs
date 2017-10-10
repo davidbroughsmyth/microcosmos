@@ -26,7 +26,6 @@ reasons why that component is marked as unhealthy"))
   (let [healthchecker (:healthcheck components)
         fut-result (check components)]
     (future/map (fn [{:keys [meta]} {:keys [result] :as payload}]
-                  (println meta payload result)
                   (io/send! healthchecker {:payload payload
                                            :meta {:status-code (if result 200 503)
                                                   :response (:response meta)}}))
@@ -46,7 +45,7 @@ reasons why that component is marked as unhealthy"))
          (reset! http-server (. http createServer (fn [request response]
                                                     (function {:meta {:request request
                                                                       :response response}}))))
-         (.listen @http-server 8081 "127.0.0.1" #(println "Healthchecker running...")))
+         (.listen @http-server 8081 "127.0.0.1" #()))
 
        (send! [_ {:keys [payload meta]}]
          (aset (:response meta) "statusCode" (:status-code meta))

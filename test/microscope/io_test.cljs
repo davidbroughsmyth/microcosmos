@@ -23,5 +23,3 @@
   (testing "de-serializes JSON in a clojure way"
     (is (= {:foo-one 10}
            (io/deserialize-msg "{\"foo_one\":10}")))))
-
-(run-tests)

@@ -32,5 +32,3 @@
       (is (re-find #"FATAL: Error!\n\nCID: FOO" res))
       (is (re-find #"EX: example" res))
       (is (re-find #"DATA: \{:foo BAR\}" res)))))
-
-(run-tests)

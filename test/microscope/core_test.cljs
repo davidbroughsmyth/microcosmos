@@ -54,4 +54,3 @@
                (is (= [{:msg "Message" :type :error :data nil}]
                       @log-msgs))
                (done))))))
-(run-tests)

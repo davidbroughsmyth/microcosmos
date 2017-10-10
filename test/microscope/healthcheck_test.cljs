@@ -75,5 +75,3 @@
                           %))
                    (health/stop-health-checker!)
                    (done))))))
-
-(run-tests)
