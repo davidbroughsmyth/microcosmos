@@ -52,25 +52,28 @@
 (defn get-json [fun]
   (let [output (atom "")
         json (atom nil)
-        req (. http (request #js {:host "localhost" :port 808 :path "/health" :method "GET"}
+        req (. http (request #js {:host "localhost" :port 8081 :path "/health" :method "GET"}
                             (fn [response]
                               (doto response
+                                    (.on "error" println)
                                     (.on "data" #(swap! output str %))
-                                    (.on "end" #(reset! json (->> @output
-                                                                  (.parse js/JSON)
-                                                                  (js->clj)
-                                                                  (assoc :status-code (.-statusCode %))
-                                                                  fun)))
-                                    (.on "error" println)))))]
+                                    (.on "end" #(do
+                                                  (reset! json (-> @output
+                                                                   (->> (.parse js/JSON))
+                                                                   js->clj
+                                                                   (assoc :status-code (.-statusCode response))
+                                                                   fun))))))))]
     (.end req)))
 
 (deftest gen-http-entrypoint
   (async done
+    (health/stop-health-checker!)
     (let [subscribe (components/subscribe-with :healthy (constantly healthy-component))]
       (subscribe :healthcheck health/handle-healthcheck)
       (get-json #(do
-                   (is (= {:result true :details {:healthy nil} :status-code 200}
+                   (is (= {"result" true "details" {"healthy" nil} :status-code 200}
                           %))
+                   (health/stop-health-checker!)
                    (done))))))
 
 (run-tests)

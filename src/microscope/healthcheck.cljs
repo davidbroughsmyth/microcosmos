@@ -22,44 +22,59 @@ reasons why that component is marked as unhealthy"))
       #(let [healthy? (->> % (some second) not)]
          {:result healthy? :details (into {} %)}))))
 
-; ; FIXME: This is TEMPORARY!
-; ; Until we have a REAL HTTP server component, we'll be using
-; ; Finagle's component to at least serve healthchecks in a specific port
-; (defn handle-healthcheck [fut-request components]
-;   (let [healthcheck (:healthcheck components)
-;         result (check components)
-;         msg (cond-> {:payload result}
-;                     (not (:result result)) (assoc :meta {:status-code 503}))
-;         send! (constantly (io/send! healthcheck msg))]
-;     (future/map send! fut-request)))
+(defn handle-healthcheck [fut-request components]
+  (let [healthchecker (:healthcheck components)
+        fut-result (check components)]
+    (future/map (fn [{:keys [meta]} {:keys [result] :as payload}]
+                  (println meta payload result)
+                  (io/send! healthchecker {:payload payload
+                                           :meta {:status-code (if result 200 503)
+                                                  :response (:response meta)}}))
+                fut-request fut-result)))
+
+(def http-server (atom nil))
+
+(defn stop-health-checker! []
+  (if-let [server @http-server]
+    (.close server #(reset! http-server nil))))
+
+(def http (js/require "http"))
+(def default-health-checker
+  (delay
+     (reify io/IO
+       (listen [_ function]
+         (reset! http-server (. http createServer (fn [request response]
+                                                    (function {:meta {:request request
+                                                                      :response response}}))))
+         (.listen @http-server 8081 "127.0.0.1" #(println "Healthchecker running...")))
+
+       (send! [_ {:keys [payload meta]}]
+         (aset (:response meta) "statusCode" (:status-code meta))
+         (aset (:response meta) "body" (->> payload clj->js (.stringify js/JSON))))
+
+       (ack! [_ {:keys [meta]}]
+         (.end (:response meta) (.-body (:response meta))))
+
+       (reject! [_ {:keys [meta]} _]
+         (aset (:response meta) "statusCode" 404)
+         (.end (:response meta) "\"REJECTED\""))
+
+       (log-message [_ _ _]))))
+
+
 ;
-; (def http-server (atom nil))
+; const hostname = '127.0.0.1';
+; const port = 3000;
 ;
-; (defn stop-health-checker! []
-;   (if-let [server @http-server]
-;     (builder-server/close! server)
-;     (reset! http-server nil)))
+; const server = http.createServer((req, res) => {})
+;   res.statusCode = 200;
+;   res.setHeader('Content-Type', 'text/plain');
+;   res.end('Hello World\n');
+; ;
 ;
-; (def default-health-checker
-;   (delay
-;    (let [p (atom nil)]
-;      (reify io/IO
-;        (listen [_ function]
-;          (let [server (http-server/serve ":8081" (service/mk [_]
-;                                                    (reset! p (promise))
-;                                                    (function {})
-;                                                    @@p))]
-;            (reset! http-server server)))
-;        (send! [_ {:keys [payload meta]}]
-;          (deliver @p (-> (:status-code meta)
-;                          (or 200)
-;                          (msg/response)
-;                          (msg/set-content-string (json/encode payload))
-;                          future/just)))
-;        (ack! [_ _])
-;        (reject! [_ _ _]
-;           (deliver @p (future/just (msg/response 404))))
-;        (log-message [_ _ _])))))
+; server.listen(port, hostname, () => {})
+;   console.log(`Server running at http://${hostname}:${port}/`);
+; ;
 
 (defn health-checker-gen [params]
   (if (:mocked params)
@@ -67,5 +82,5 @@ reasons why that component is marked as unhealthy"))
       (listen [_ _])
       (send! [_ _])
       (ack! [_ _])
-      (reject! [_ _ _]))))
-    ; @default-health-checker))
+      (reject! [_ _ _]))
+    @default-health-checker))
