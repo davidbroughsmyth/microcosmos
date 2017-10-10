@@ -19,13 +19,25 @@
                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
                    :plugins [[lein-midje "3.2.1"]]}}
 
-  :cljsbuild {:builds [{:source-paths ["src"]
+  :cljsbuild {:builds [{:source-paths ["src"]}
                         :id "prod"
                         :compiler {:output-to "target/main.js"
                                    :optimizations :simple
                                    :hashbang false
                                    :output-wrapper true
                                    :pretty-print true
+                                   :language-in :ecmascript5
+                                   :target :nodejs}]
+                       {:source-paths ["src" "test"]
+                        :id "test"
+                        :compiler {:output-to "target/test.js"
+                                   :optimizations :simple
+                                   :hashbang false
+                                   :language-in :ecmascript5
+                                   :output-wrapper true
+                                   :output-dir "target/js-test"
+                                   :pretty-print true
+                                   :process-shim true
                                    :target :nodejs}}
                        {:source-paths ["src" "test"]
                         :id "dev"
@@ -33,5 +45,6 @@
                         :compiler {:output-to "target/main.js"
                                    :output-dir "target/js"
                                    :main microscope.all-tests
+                                   :process-shim true
                                    :optimizations :none
-                                   :target :nodejs}}]})
+                                   :target :nodejs}}})
