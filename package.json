@@ -1,0 +1,10 @@
+{
+  "name": "microscope",
+  "version": "0.0.1",
+  "devDependencies": {
+    "mocha": "^4.0.1"
+  },
+  "scripts": {
+    "test": "mocha"
+  }
+}
