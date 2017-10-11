@@ -14,7 +14,6 @@ let fakeLogQueue = {
 
 let fakeLogger = {
   log: (message, type, data) => {
-    console.log("LOGGING", message, type, data)
     logMessages.push({message: message, type: type, data: data})
   }
 }
