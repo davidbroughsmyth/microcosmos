@@ -12,6 +12,8 @@ script:
   - lein midje
   - lein cljsbuild once
   - node target/test.js
+  - npm install
+  - npm test
 
 before_install:
  - if [ ! -z "$GPG_SECRET_KEYS" ]; then echo $GPG_SECRET_KEYS | base64 --decode | gpg --import; fi
