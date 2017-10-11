@@ -9,8 +9,8 @@
 
 (nodejs/enable-util-print!)
 
-(defn- clj-map [map] (-> map js->clj walk/keywordize-keys))
-(defn- flatten-map [map] (-> map clj-map seq flatten))
+(defn clj-map [map] (-> map js->clj walk/keywordize-keys))
+(defn flatten-map [map] (-> map clj-map seq flatten))
 
 (defn- decorate-component [component]
   (let [js-component (clj->js component)]
@@ -56,13 +56,6 @@
   (reify health/Healthcheck
     (unhealthy? [_]
       (->> obj .isUnhealthy future/just (future/map js->clj)))))
-
-(defn- js->clj->js [cljs-function]
-  (fn [ & args]
-    (->> args
-         (map js->clj)
-         (apply cljs-function)
-         clj->js)))
 
 (aset js/module "exports"
       #js {:implementIO implement-io
