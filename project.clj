@@ -42,7 +42,7 @@
                        {:source-paths ["src" "test"]
                         :id "dev"
                         :figwheel true
-                        :compiler {:output-to "target/main.js"
+                        :compiler {:output-to "target/dev.js"
                                    :output-dir "target/js"
                                    :main microscope.all-tests
                                    :process-shim true
