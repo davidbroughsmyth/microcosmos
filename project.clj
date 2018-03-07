@@ -1,6 +1,6 @@
-(defproject microscope "0.2.0"
+(defproject microcosmos "0.2.0"
   :description "Microservice architecture for Clojure"
-  :url "https://github.com/acessocard/microscope"
+  :url "https://github.com/acessocard/microcosmos"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]

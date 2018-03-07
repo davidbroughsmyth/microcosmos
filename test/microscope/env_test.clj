@@ -1,6 +1,6 @@
-(ns microscope.env-test
+(ns microcosmos.env-test
   (:require [midje.sweet :refer :all]
-            [microscope.env :refer [secret-or-env]]
+            [microcosmos.env :refer [secret-or-env]]
             [environ.core :as environ]))
 
 (facts "about `secret-or-env`"

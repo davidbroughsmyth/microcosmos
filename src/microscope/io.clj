@@ -1,4 +1,4 @@
-(ns microscope.io
+(ns microcosmos.io
   (:require [clojure.main :as clj-main]
             [cheshire.generate :as generators]
             [cheshire.core :as json]

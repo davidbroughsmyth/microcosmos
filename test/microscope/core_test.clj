@@ -1,10 +1,10 @@
-(ns microscope.core-test
+(ns microcosmos.core-test
   (:refer-clojure :exclude [subs])
   (:require [finagle-clojure.future-pool :as fut-pool]
-            [microscope.core :as components]
-            [microscope.future :as future]
-            [microscope.io :as io]
-            [microscope.logging :as log]
+            [microcosmos.core :as components]
+            [microcosmos.future :as future]
+            [microcosmos.io :as io]
+            [microcosmos.logging :as log]
             [midje.sweet :refer :all]))
 
 (defn fake-component [other]

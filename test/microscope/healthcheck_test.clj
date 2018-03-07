@@ -1,11 +1,11 @@
-(ns microscope.healthcheck-test
+(ns microcosmos.healthcheck-test
   (:require [cheshire.core :as json]
             [midje.sweet :refer :all]
-            [microscope.logging :as log]
-            [microscope.core :as components]
+            [microcosmos.logging :as log]
+            [microcosmos.core :as components]
             [finagle-clojure.http.client :as http-client]
             [finagle-clojure.http.message :as msg]
-            [microscope.healthcheck :as health]))
+            [microcosmos.healthcheck :as health]))
 
 (def unhealthy-component
   (reify health/Healthcheck

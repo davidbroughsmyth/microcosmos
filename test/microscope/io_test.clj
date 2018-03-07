@@ -1,6 +1,6 @@
-(ns microscope.io-test
+(ns microcosmos.io-test
   (:require [midje.sweet :refer :all]
-            [microscope.io :as io]))
+            [microcosmos.io :as io]))
 
 (facts "about serializing JSON"
   (fact "serializes in a clojure way"

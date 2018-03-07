@@ -1,8 +1,8 @@
 (ns delayed-message
-  (:require [microscope.core :as components]
-            [microscope.logging :as log]
-            [microscope.future :as future]
-            [microscope.queue.rabbit :as rabbit]))
+  (:require [microcosmos.core :as components]
+            [microcosmos.logging :as log]
+            [microcosmos.future :as future]
+            [microcosmos.queue.rabbit :as rabbit]))
 
 (def sub (components/subscribe-with :result-q (rabbit/queue "test-result" :auto-delete true)
                                     :logger log/default-logger-gen))

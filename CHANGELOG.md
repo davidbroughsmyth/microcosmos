@@ -10,7 +10,7 @@ a simple schema)
 
 ### Bugfix
 * Adds serializer to Throwable, not Exceptions
-* Adds a multimethod on microscope.io - `serialize-type` - that allows to serialize
+* Adds a multimethod on microcosmos.io - `serialize-type` - that allows to serialize
   specific types, falling back to just generating a string with `str`. Fixes
   serializes message
 

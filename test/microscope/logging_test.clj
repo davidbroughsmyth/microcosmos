@@ -1,6 +1,6 @@
-(ns microscope.logging-test
+(ns microcosmos.logging-test
   (:require [midje.sweet :refer :all]
-            [microscope.logging :as log]
+            [microcosmos.logging :as log]
             [cheshire.core :as cheshire]))
 
 (def default-logger (log/default-logger-gen {:cid "F"}))
