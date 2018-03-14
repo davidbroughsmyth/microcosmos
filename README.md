@@ -1,7 +1,7 @@
 # Microcosmos Project
-[![Build Status](https://travis-ci.org/acessocard/microcosmos.svg?branch=master)](https://travis-ci.org/acessocard/microcosmos)
+[![Build Status](https://travis-ci.org/mauricioszabo/microcosmos.svg?branch=master)](https://travis-ci.org/mauricioszabo/microcosmos)
 [![Clojars Project](https://img.shields.io/clojars/v/microcosmos.svg)](https://clojars.org/microcosmos)
-[![Dependencies Status](https://jarkeeper.com/acessocard/microcosmos/status.svg)](https://jarkeeper.com/acessocard/microcosmos)
+[![Dependencies Status](https://jarkeeper.com/mauricioszabo/microcosmos/status.svg)](https://jarkeeper.com/mauricioszabo/microcosmos)
 
 Microcosmos is a list of libraries to ease the use of Clojure with microservices.
 It is _not_ an opinated framework, nor it's a complete solution like Rails is
@@ -68,7 +68,7 @@ It's that simple.
 
 ## MIT License
 
-Copyright 2017 AcessoCard
+Copyright 2017 Maurício Szabo
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
