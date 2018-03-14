@@ -1,9 +1,9 @@
-(ns microscope.rabbit.node-js
-  (:require [microscope.io :as io]
-            [microscope.healthcheck :as health]
-            [microscope.core :as components]
-            [microscope.future :as future]
-            [microscope.logging :as log]
+(ns microcosmos.rabbit.node-js
+  (:require [microcosmos.io :as io]
+            [microcosmos.healthcheck :as health]
+            [microcosmos.core :as components]
+            [microcosmos.future :as future]
+            [microcosmos.logging :as log]
             [clojure.walk :as walk]
             [cljs.nodejs :as nodejs]))
 

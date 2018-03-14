@@ -24,7 +24,7 @@ let subscribe = micro.subscribeWith({
   logger: () => micro.implementLogger(fakeLogger)
 })
 
-describe('Microscope core components', () => {
+describe('microcosmos core components', () => {
   beforeEach( () => {
     logMessages = []
   })
