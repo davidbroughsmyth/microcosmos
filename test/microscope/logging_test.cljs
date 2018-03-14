@@ -1,6 +1,6 @@
-(ns microscope.logging-test
+(ns microcosmos.logging-test
   (:require [clojure.test :refer-macros [deftest is testing run-tests async]]
-            [microscope.logging :as log]
+            [microcosmos.logging :as log]
             [clojure.walk :as walk]))
 
 (def default-logger (log/default-logger-gen {:cid "F"}))

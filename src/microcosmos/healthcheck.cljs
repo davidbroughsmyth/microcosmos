@@ -1,6 +1,6 @@
-(ns microscope.healthcheck
-  (:require [microscope.future :as future]
-            [microscope.io :as io]))
+(ns microcosmos.healthcheck
+  (:require [microcosmos.future :as future]
+            [microcosmos.io :as io]))
 
 (defprotocol Healthcheck
   (unhealthy? [component]
@@ -59,21 +59,6 @@ reasons why that component is marked as unhealthy"))
          (.end (:response meta) "\"REJECTED\""))
 
        (log-message [_ _ _]))))
-
-
-;
-; const hostname = '127.0.0.1';
-; const port = 3000;
-;
-; const server = http.createServer((req, res) => {})
-;   res.statusCode = 200;
-;   res.setHeader('Content-Type', 'text/plain');
-;   res.end('Hello World\n');
-; ;
-;
-; server.listen(port, hostname, () => {})
-;   console.log(`Server running at http://${hostname}:${port}/`);
-; ;
 
 (defn health-checker-gen [params]
   (if (:mocked params)

@@ -1,6 +1,6 @@
-(ns microscope.io-test
+(ns microcosmos.io-test
   (:require [clojure.test :refer-macros [deftest is testing run-tests async]]
-            [microscope.io :as io]))
+            [microcosmos.io :as io]))
 
 (deftest serializing-json
   (testing "serializing in a clojure way"

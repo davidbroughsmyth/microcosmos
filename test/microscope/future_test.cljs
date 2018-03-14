@@ -1,7 +1,7 @@
-(ns microscope.future-test
-  (:require-macros [microscope.future :as future])
+(ns microcosmos.future-test
+  (:require-macros [microcosmos.future :as future])
   (:require [clojure.test :refer-macros [deftest is testing run-tests async]]
-            [microscope.future :as future]))
+            [microcosmos.future :as future]))
 
 (deftest just-future
   (async done

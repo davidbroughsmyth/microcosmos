@@ -1,4 +1,4 @@
-(ns microscope.future
+(ns microcosmos.future
   (:refer-clojure :exclude [map])
   (:require [finagle-clojure.futures :as fut-finagle]
             [finagle-clojure.future-pool :as fut-pool]

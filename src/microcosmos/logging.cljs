@@ -1,4 +1,4 @@
-(ns microscope.logging
+(ns microcosmos.logging
   (:require [clojure.string :as str]
             [clojure.walk :as walk]))
 

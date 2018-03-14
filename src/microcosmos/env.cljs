@@ -1,4 +1,4 @@
-(ns microscope.env
+(ns microcosmos.env
   (:require [clojure.string :as str]))
 
 (def ^:private fs (js/require "fs"))

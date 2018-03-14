@@ -1,10 +1,10 @@
-(ns microscope.core
-  #?(:cljs (:require-macros [microscope.future :as future]))
+(ns microcosmos.core
+  #?(:cljs (:require-macros [microcosmos.future :as future]))
   (:require [clojure.string :as str]
-            [microscope.future :as future]
-            [microscope.logging :as log]
-            [microscope.io :as io]
-            [microscope.healthcheck :as health]))
+            [microcosmos.future :as future]
+            [microcosmos.logging :as log]
+            [microcosmos.io :as io]
+            [microcosmos.healthcheck :as health]))
 
 (def listen io/listen)
 (def send! io/send!)
@@ -64,7 +64,7 @@
 or something like that). Returns a function that can be used (and re-used) to subscribe
 to components
 
-Accepts key-value pairs to define additional microscope. A component generator function
+Accepts key-value pairs to define additional microcosmos. A component generator function
 is, normally, a function that accepts some parameters and returns another function
 (the generator). Generators MUST accept a single parameter that'll configure
 additional data, such as `:cid` and `:mocked`.
@@ -105,7 +105,7 @@ memory only, RabbitMQ is disabled and code is used to coordinate between message
 
 If the first argument is a Map, it'll be used to pass parameters to mocked environment.
 One possible parameter is `:mocks` - a map where keys are defined components, and values
-are the mocked microscope. Other parameters are dependend of each component implementation."
+are the mocked components. Other parameters are dependend of each component implementation."
   [ & args]
   (let [possible-params (first args)
         params (cond-> {:mocked true}

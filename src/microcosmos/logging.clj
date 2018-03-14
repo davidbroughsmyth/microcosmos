@@ -1,4 +1,4 @@
-(ns microscope.logging
+(ns microcosmos.logging
   (:require [cheshire.core :as cheshire]
             [cheshire.generate :as generators]
             [clojure.repl :refer [demunge]]

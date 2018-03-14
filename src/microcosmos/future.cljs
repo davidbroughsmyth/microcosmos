@@ -1,4 +1,4 @@
-(ns microscope.future
+(ns microcosmos.future
   (:refer-clojure :exclude [map]))
 
 (def join #(.all js/Promise %))

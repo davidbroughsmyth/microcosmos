@@ -1,6 +1,6 @@
-(defproject microscope "0.2.1"
+(defproject microcosmos "0.2.1"
   :description "Microservice architecture for Clojure"
-  :url "https://github.com/acessocard/microscope"
+  :url "https://github.com/mauricioszabo/microcosmos"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
@@ -44,7 +44,7 @@
                         :figwheel true
                         :compiler {:output-to "target/main.js"
                                    :output-dir "target/js"
-                                   :main microscope.all-tests
+                                   :main microcosmos.all-tests
                                    :process-shim true
                                    :optimizations :none
                                    :target :nodejs}}]})

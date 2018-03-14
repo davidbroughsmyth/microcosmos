@@ -1,12 +1,12 @@
-(ns microscope.all-tests
+(ns microcosmos.all-tests
   (:require [cljs.nodejs :as nodejs]
             [clojure.test :refer-macros [run-all-tests]]
-            [microscope.future-test]
-            [microscope.logging-test]
-            [microscope.io-test]
-            [microscope.env-test]
-            [microscope.healthcheck-test]
-            [microscope.core-test]))
+            [microcosmos.future-test]
+            [microcosmos.logging-test]
+            [microcosmos.io-test]
+            [microcosmos.env-test]
+            [microcosmos.healthcheck-test]
+            [microcosmos.core-test]))
 
 (nodejs/enable-util-print!)
 

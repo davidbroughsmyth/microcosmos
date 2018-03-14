@@ -1,6 +1,6 @@
-(ns microscope.env-test
+(ns microcosmos.env-test
   (:require [clojure.test :refer-macros [deftest is testing run-tests async]]
-            [microscope.env :refer [secret-or-env]]))
+            [microcosmos.env :refer [secret-or-env]]))
 
 (deftest secret-or-env-test
   (testing "when a secret file is present"

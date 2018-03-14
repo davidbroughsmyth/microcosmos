@@ -1,7 +1,7 @@
-(ns microscope.healthcheck-test
+(ns microcosmos.healthcheck-test
   (:require [clojure.test :refer-macros [deftest is testing run-tests async]]
-            [microscope.core :as components]
-            [microscope.healthcheck :as health]))
+            [microcosmos.core :as components]
+            [microcosmos.healthcheck :as health]))
 
 (def unhealthy-async-component
   (reify health/Healthcheck

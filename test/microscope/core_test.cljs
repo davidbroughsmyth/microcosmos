@@ -1,13 +1,13 @@
-(ns microscope.core-test
+(ns microcosmos.core-test
   (:refer-clojure :exclude [subs])
-  (:require-macros [microscope.core :as c-macros]
+  (:require-macros [microcosmos.core :as c-macros]
                    [cljs.core.async.macros :refer [go]])
   (:require [clojure.test :refer-macros [deftest is testing run-tests async]]
-            [microscope.core :as components]
-            [microscope.logging :as log]
-            [microscope.future :as future]
+            [microcosmos.core :as components]
+            [microcosmos.logging :as log]
+            [microcosmos.future :as future]
             [cljs.core.async :refer [chan >! <!]]
-            [microscope.io :as io]))
+            [microcosmos.io :as io]))
 
 (def queue (atom nil))
 (defn fake-queue [{:keys [mocked]}]
