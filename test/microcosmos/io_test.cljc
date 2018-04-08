@@ -19,12 +19,13 @@
        (check (io/serialize-msg string?) => #"clojure.core/string\?")))
 
   (testing "demunges atoms or references"
-    (check (io/serialize-msg (atom "foo")) => #"foo")))
+    (check (io/serialize-msg (atom "foo")) => #"foo"))
 
-  ; (testing "serializes exception info"
-  ;   (let [ex (try (throw (ex-info "FOO" {:foo integer? :bar (atom nil)}))
-  ;              (catch Throwable e e))]
-  ;     (check (io/serialize-msg ex) => #"FOO"))))
+  #?(:clj
+     (testing "serializes exception info"
+       (let [ex (try (throw (ex-info "FOO" {:foo integer? :bar (atom nil)}))
+                  (catch Throwable e e))]
+         (check (io/serialize-msg ex) => #"FOO")))))
 
 (deftest json-deserialize
   (testing "de-serializes JSON in a clojure way"
