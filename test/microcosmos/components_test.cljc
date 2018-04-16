@@ -25,3 +25,16 @@
     (check (components/mocked {:mocks {:some-c "FOOBAR"}}
              (components/create components :some-c some-msg))
            => "FOOBAR")))
+
+(def msgs-sent (atom []))
+(def msgs-received (atom []))
+(defn subscriber [_])
+(defn queue [_])
+
+(deftest subscription
+  (testing "subscribes to async messages"
+    (let [components {:subscriber subscriber
+                      :end-queue queue}
+          subs (components/subscribe-with components)]
+      (conj msgs-received {:payload "foo"})
+      (check @msgs-received => [{:payload "FOO"}]))))
