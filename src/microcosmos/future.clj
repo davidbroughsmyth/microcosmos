@@ -1,4 +1,4 @@
-(ns microscope.future
+(ns microcosmos.future
   (:refer-clojure :exclude [map])
   (:require [finagle-clojure.futures :as fut-finagle]
             [finagle-clojure.future-pool :as fut-pool]
@@ -36,8 +36,16 @@
 (defn on-finish [fun & objs]
   (fut-finagle/ensure* (fut-finagle/collect objs) #(do (fun) nil)))
 
+(defn execute* [f]
+  (fut-pool/run* pool f))
+
+; For mocked components
+(defn sync-execute [f]
+  (let [pool (fut-pool/immediate-future-pool)]
+    (fut-pool/run* pool f)))
+
 (defmacro execute [ & args]
-  `(fut-pool/run* pool ~(cons `fn (cons [] args))))
+  `(execute* (fn [] ~@args)))
 
 (defn map-fork [fun & funs]
   (let [future (last funs)

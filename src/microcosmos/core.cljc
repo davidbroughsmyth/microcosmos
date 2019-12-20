@@ -1,10 +1,10 @@
-(ns microscope.core
+(ns microcosmos.core
+  #?(:cljs (:require-macros [microcosmos.future :as future]))
   (:require [clojure.string :as str]
-            [microscope.future :as future]
-            [microscope.logging :as log]
-            [microscope.io :as io]
-            [finagle-clojure.future-pool :as fut-pool]
-            [microscope.healthcheck :as health]))
+            [microcosmos.future :as future]
+            [microcosmos.logging :as log]
+            [microcosmos.io :as io]
+            [microcosmos.healthcheck :as health]))
 
 (def listen io/listen)
 (def send! io/send!)
@@ -12,7 +12,7 @@
 (def reject! io/reject!)
 
 (defn generate-cid [old-cid]
-  (let [upcase-chars (map char (range (int \A) (inc (int \Z))))
+  (let [upcase-chars (map char (range 65 90)) ; 65 = A, 90 = Z
         digits (range 10)
         alfa-digits (cycle (map str (concat upcase-chars digits)))
         cid-gen #(apply str (take % (random-sample 0.02 alfa-digits)))]
@@ -20,12 +20,14 @@
       (str old-cid "." (cid-gen 5))
       (cid-gen 8))))
 
-(defn params-for-generators [msg-data]
+(defn params-for-generators* [msg-data]
   (let [meta (:meta msg-data)
         cid (:cid meta)
         new-cid (generate-cid cid)]
     {:cid new-cid
      :meta (dissoc meta :cid)}))
+
+(def params-for-generators params-for-generators*)
 
 (def ^:private get-generators identity)
 
@@ -62,7 +64,7 @@
 or something like that). Returns a function that can be used (and re-used) to subscribe
 to components
 
-Accepts key-value pairs to define additional microscope. A component generator function
+Accepts key-value pairs to define additional microcosmos. A component generator function
 is, normally, a function that accepts some parameters and returns another function
 (the generator). Generators MUST accept a single parameter that'll configure
 additional data, such as `:cid` and `:mocked`.
@@ -103,14 +105,13 @@ memory only, RabbitMQ is disabled and code is used to coordinate between message
 
 If the first argument is a Map, it'll be used to pass parameters to mocked environment.
 One possible parameter is `:mocks` - a map where keys are defined components, and values
-are the mocked microscope. Other parameters are dependend of each component implementation."
+are the mocked components. Other parameters are dependend of each component implementation."
   [ & args]
   (let [possible-params (first args)
         params (cond-> {:mocked true}
                        (map? possible-params) (merge possible-params))
         mocked-comps (get params :mocks {})]
-    `(let [function# ~params-for-generators]
-       (with-redefs [params-for-generators #(merge (function# %) ~params)
-                     get-generators #(merge % ~mocked-comps)
-                     future/pool (fut-pool/immediate-future-pool)]
-         ~(cons `do args)))))
+    `(with-redefs [params-for-generators #(merge (params-for-generators* %) ~params)
+                   get-generators #(merge % ~mocked-comps)
+                   future/execute* future/sync-execute]
+       ~@args)))

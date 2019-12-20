@@ -1,4 +1,4 @@
-(ns microscope.env
+(ns microcosmos.env
   (:require [environ.core :refer [env]]
             [clojure.java.io :as io]
             [clojure.string :as str]))

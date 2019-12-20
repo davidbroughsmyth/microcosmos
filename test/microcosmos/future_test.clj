@@ -1,7 +1,7 @@
-(ns microscope.future-test
+(ns microcosmos.future-test
   (:require [midje.sweet :refer :all]
-            [microscope.future.test :refer :all]
-            [microscope.future :as future]))
+            [microcosmos.future.test :refer :all]
+            [microcosmos.future :as future]))
 
 (facts "when checking things that resolve on future"
   (fact "creates a future with a single argument"

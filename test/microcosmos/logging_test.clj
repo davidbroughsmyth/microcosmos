@@ -1,7 +1,9 @@
-(ns microscope.logging-test
+(ns microcosmos.logging-test
   (:require [midje.sweet :refer :all]
-            [microscope.logging :as log]
-            [cheshire.core :as cheshire]))
+            [microcosmos.logging :as log]
+            [cheshire.core :as cheshire]
+            [matcher-combinators.midje :refer [match]]
+            [matcher-combinators.matchers :as m]))
 
 (def default-logger (log/default-logger-gen {:cid "F"}))
 (def mocked-logger (log/default-logger-gen {:mocked true :cid "FOO"}))
@@ -15,14 +17,13 @@
 
   (fact "parses exception code"
     (log/parse-exception (ex-info "example" {:foo "BAR"}))
-    => (just
-        {:cause "example"
-         :via [{:type clojure.lang.ExceptionInfo
-                :at ["clojure.core/ex-info" "invokeStatic" "core.clj" 4617]
-                :message "example"
-                :data {:foo "BAR"}}]
-         :data {:foo "BAR"}
-         :trace vector?}))
+    => (match {:cause "example"
+               :via [{:type any?
+                      :at vector?
+                      :message "example"
+                      :data {:foo "BAR"}}]
+               :data {:foo "BAR"}
+               :trace vector?}))
 
   (fact "logs exception"
     (let [res (with-out-str (log/error default-logger "Error!" :ex (ex-info "example" {:foo "BAR"})))

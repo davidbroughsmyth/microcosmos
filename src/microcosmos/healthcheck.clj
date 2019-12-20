@@ -1,12 +1,12 @@
-(ns microscope.healthcheck
+(ns microcosmos.healthcheck
   (:require [cheshire.core :as json]
             [finagle-clojure.builder.server :as builder-server]
             [finagle-clojure.http.message :as msg]
             [finagle-clojure.http.server :as http-server]
             [finagle-clojure.service :as service]
-            [microscope.future :as future]
-            [microscope.io :as io]
-            [microscope.logging :as log]))
+            [microcosmos.future :as future]
+            [microcosmos.io :as io]
+            [microcosmos.logging :as log]))
 
 (defprotocol Healthcheck
   (unhealthy? [component]
