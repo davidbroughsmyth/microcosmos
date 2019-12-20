@@ -99,7 +99,7 @@
                         "NumberFormatException.java" 65]}]}
 
         (-> @log-output :data :backtrace)
-        => #"java\.lang\.Integer\.parseInt \(Integer\.java:580\)\n"))))
+        => #"java\.lang\.NumberFormatException"))))
 
 ; Mocking section
 (def queue (atom nil))

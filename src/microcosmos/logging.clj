@@ -22,10 +22,9 @@ Type can be :info, :warning, :error or :fatal"))
         println)))
 
 (defn- stack->vector [ste]
-  [(demunge (.getClassName ste))
-   (demunge (.getMethodName ste))
-   (.getFileName ste)
-   (.getLineNumber ste)])
+  (-> ste
+      (update 0 (comp demunge str))
+      (update 1 (comp demunge str))))
 
 (defn- just-stack [stack]
   (let [stack (mapv #(update % 0 str/replace #"(eval|fn)\-*\d+" "$1") stack)

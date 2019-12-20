@@ -14,6 +14,7 @@
 
   :profiles {:dev {:src-paths ["dev"]
                    :dependencies [[midje "1.9.9"]
+                                  [check "0.1.0-SNAPSHOT"]
                                   [figwheel-sidecar "0.5.13"]
                                   [com.cemerick/piggieback "0.2.1"]]
                    ; :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
