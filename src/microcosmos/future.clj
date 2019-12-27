@@ -36,7 +36,7 @@
 (defn on-finish [fun & objs]
   (fut-finagle/ensure* (fut-finagle/collect objs) #(do (fun) nil)))
 
-(defn execute* [f]
+(defn ^:dynamic execute* [f]
   (fut-pool/run* pool f))
 
 ; For mocked components
